@@ -1,0 +1,7 @@
+{
+  "name": "PathHome",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
