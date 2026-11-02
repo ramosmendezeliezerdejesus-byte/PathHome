@@ -1,0 +1,42 @@
+<main class="recovery-layout">
+  <header class="recovery-header">
+    <button
+      class="recovery-back"
+      type="button"
+      aria-label="Volver a iniciar sesión"
+      (click)="volver.emit(correo)">
+      ‹
+    </button>
+    <h1>Recuperar contraseña</h1>
+  </header>
+
+  <p class="recovery-description">
+    Escribe tu correo y te enviaremos un enlace para crear una contraseña nueva.
+  </p>
+
+  <form class="recovery-form" (ngSubmit)="enviarEnlace()" novalidate>
+    <label class="visually-hidden" for="recovery-email">Correo electrónico</label>
+    <div class="recovery-input" [class.invalid]="enviado && !correoValido">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 5h18v14H3z" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <path d="m4 7 8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.8" />
+      </svg>
+      <input
+        id="recovery-email"
+        name="correoRecuperacion"
+        type="email"
+        inputmode="email"
+        autocomplete="email"
+        placeholder="Correo electrónico"
+        [(ngModel)]="correo"
+        [attr.aria-invalid]="enviado && !correoValido" />
+    </div>
+    @if (enviado && !correoValido) {
+      <small class="recovery-error">Introduce un correo electrónico válido.</small>
+    }
+    <button class="recovery-submit" type="submit">Enviar enlace</button>
+    @if (mensaje) {
+      <p class="recovery-message" role="status">{{ mensaje }}</p>
+    }
+  </form>
+</main>

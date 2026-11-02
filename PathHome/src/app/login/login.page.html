@@ -1,5 +1,11 @@
 
 <ion-content [fullscreen]="true" class="login-content">
+  @if (pantallaRecuperacion) {
+    <app-recuperar-contrasena
+      [correoInicial]="correo"
+      (volver)="volverAlLogin($event)">
+    </app-recuperar-contrasena>
+  } @else {
   <main class="login-layout">
 
     <header class="login-header">
@@ -233,4 +239,5 @@
     </section>
 
   </main>
+  }
 </ion-content>

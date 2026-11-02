@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { IonButton, IonContent, IonIcon, IonInput } from '@ionic/angular';
 import { addIcons } from 'ionicons';
+import { RecuperarContrasenaComponent } from './recuperar-contrasena.component';
 import {
   mailOutline,
   lockClosedOutline,
@@ -24,7 +25,8 @@ import {
     IonContent,
     IonButton,
     IonInput,
-    IonIcon
+    IonIcon,
+    RecuperarContrasenaComponent
   ]
 })
 export class LoginPage {
@@ -41,6 +43,7 @@ export class LoginPage {
   adminAbierto = false;
 
   aviso = '';
+  pantallaRecuperacion = false;
 
   constructor(private readonly router: Router) {
     addIcons({
@@ -95,8 +98,13 @@ export class LoginPage {
   }
 
   mostrarRecuperacion(): void {
-    this.aviso =
-      'La recuperación de contraseña estará disponible cuando se implemente esa pantalla.';
+    this.aviso = '';
+    this.pantallaRecuperacion = true;
+  }
+
+  volverAlLogin(correo: string): void {
+    this.correo = correo;
+    this.pantallaRecuperacion = false;
   }
 
   mostrarRegistro(): void {
