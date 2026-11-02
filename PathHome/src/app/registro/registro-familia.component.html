@@ -1,0 +1,31 @@
+<header class="screen-header">
+  <button class="back-button" type="button" aria-label="Volver a seleccionar tipo" (click)="volver.emit()">‹</button>
+  <h1>Registro de familia</h1>
+</header>
+
+<form class="register-form" (ngSubmit)="crearCuenta()" novalidate>
+  <div class="field-grid">
+    <label class="field"><span>Nombre</span><input name="nombre" [(ngModel)]="familia.nombre" autocomplete="given-name" [class.invalid]="enviado && !familia.nombre.trim()" />
+      @if (enviado && !familia.nombre.trim()) { <small>Este campo es obligatorio.</small> }
+    </label>
+    <label class="field"><span>Apellido</span><input name="apellido" [(ngModel)]="familia.apellido" autocomplete="family-name" [class.invalid]="enviado && !familia.apellido.trim()" />
+      @if (enviado && !familia.apellido.trim()) { <small>Este campo es obligatorio.</small> }
+    </label>
+  </div>
+  <label class="field"><span>Cédula</span><input name="cedula" [(ngModel)]="familia.cedula" inputmode="numeric" maxlength="13" placeholder="000-0000000-0" [class.invalid]="enviado && !cedulaValida(familia.cedula)" />
+    @if (enviado && !cedulaValida(familia.cedula)) { <small>Usa el formato 000-0000000-0.</small> }
+  </label>
+  <label class="field"><span>Correo electrónico</span><input name="correo" [(ngModel)]="familia.correo" type="email" autocomplete="email" placeholder="correo@ejemplo.com" [class.invalid]="enviado && !correoValido(familia.correo)" />
+    @if (enviado && !correoValido(familia.correo)) { <small>Introduce un correo válido.</small> }
+  </label>
+  <label class="field"><span>Teléfono</span><input name="telefono" [(ngModel)]="familia.telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="12" placeholder="809-000-0000" [class.invalid]="enviado && !telefonoValido" />
+    @if (enviado && !telefonoValido) { <small>Usa el formato 809-000-0000.</small> }
+  </label>
+  <label class="field"><span>Contraseña</span><input name="contrasena" [(ngModel)]="familia.contrasena" type="password" autocomplete="new-password" placeholder="8+ caracteres, mayúscula y número" [class.invalid]="enviado && !contrasenaValida(familia.contrasena)" />
+    @if (enviado && !contrasenaValida(familia.contrasena)) { <small>Usa al menos 8 caracteres, una mayúscula y un número.</small> }
+  </label>
+  <label class="field"><span>Confirmar contraseña</span><input name="confirmacion" [(ngModel)]="familia.confirmacion" type="password" autocomplete="new-password" [class.invalid]="enviado && familia.confirmacion !== familia.contrasena" />
+    @if (enviado && familia.confirmacion !== familia.contrasena) { <small>Las contraseñas deben coincidir.</small> }
+  </label>
+  <button class="primary-button" type="submit">Crear cuenta</button>
+</form>

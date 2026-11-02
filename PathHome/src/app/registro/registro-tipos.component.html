@@ -1,0 +1,44 @@
+<header class="screen-header centered-header">
+  <button class="back-button" type="button" aria-label="Volver a iniciar sesión" (click)="login.emit()">‹</button>
+  <h1>Crear cuenta</h1>
+  <span class="header-space" aria-hidden="true"></span>
+</header>
+
+<section class="type-selection" aria-labelledby="type-title">
+  <h2 id="type-title">Selecciona el tipo de usuario</h2>
+
+  <div class="role-list">
+    <button class="role-card family-card" type="button" (click)="seleccionado.emit('familia')">
+      <svg class="role-art family-art" viewBox="0 0 80 80" aria-hidden="true">
+        <circle cx="25" cy="25" r="11"/><circle cx="55" cy="25" r="11"/>
+        <path d="M8 68V52a17 17 0 0 1 34 0v16H8Zm30 0V51a17 17 0 0 1 34 0v17H38Z"/>
+        <path class="art-cutout" d="M18 68V53a7 7 0 0 1 14 0v15zm30 0V52a7 7 0 0 1 14 0v16z"/>
+      </svg>
+      <span class="role-copy"><strong>Familia solicitante</strong><span>Inicia tu proceso de adopción y da seguimiento a cada etapa.</span></span>
+      <span class="role-chevron" aria-hidden="true">›</span>
+    </button>
+
+    <button class="role-card institution-card" type="button" (click)="seleccionado.emit('institucion')">
+      <svg class="role-art institution-art" viewBox="0 0 80 80" aria-hidden="true">
+        <path d="M12 69h56M19 69V29l21-15 21 15v40M29 69V53h22v16M28 34h7v8h-7zm17 0h7v8h-7zm-17 12h7v7h-7zm17 0h7v7h-7zM35 23h10"/>
+      </svg>
+      <span class="role-copy"><strong>Institución</strong><span>Personal de la institución: gestiona expedientes, documentos y etapas.</span></span>
+      <span class="role-chevron" aria-hidden="true">›</span>
+    </button>
+
+    <button class="role-card professional-card" type="button" (click)="seleccionado.emit('profesional')">
+      <svg class="role-art professional-art" viewBox="0 0 80 80" aria-hidden="true">
+        <path d="M40 8 66 19v20c0 17-11 27-26 34C25 66 14 56 14 39V19L40 8Z"/>
+        <path class="shield-inner" d="M40 17 57 24v15c0 12-7 20-17 26-10-6-17-14-17-26V24l17-7Z"/>
+        <path class="shield-check" d="m30 40 7 7 14-15"/>
+      </svg>
+      <span class="role-copy"><strong>Profesional</strong><span>Psicólogo/a especializado/a en niños: evaluaciones y seguimiento emocional.</span></span>
+      <span class="role-chevron" aria-hidden="true">›</span>
+    </button>
+  </div>
+
+  <p class="approval-note">Institución y Profesional requieren verificar su identidad con una foto y ser aprobados por el administrador.</p>
+  <p class="login-prompt">¿Ya tienes una cuenta? <button type="button" (click)="login.emit()">Inicia sesión</button></p>
+</section>
+
+<img class="bottom-decoration" src="assets/img/img7.jpg" alt="" aria-hidden="true" />

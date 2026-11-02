@@ -1,27 +1,147 @@
-#container {
+
+:host {
+  display: block;
+}
+
+.welcome-page {
+  --background: #fffaf5;
+}
+
+.welcome-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 30px 20px 190px;
+  overflow: hidden;
+  background: #fffaf5;
+}
+
+.welcome-brand {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin: auto 0;
   text-align: center;
+}
 
+.welcome-logo {
+  display: block;
+  width: min(78vw, 390px);
+  height: auto;
+  max-height: 48vh;
+  object-fit: contain;
+}
+
+.welcome-tagline {
+  max-width: 340px;
+  margin: 14px 0 0;
+  color: #55718f;
+  font-family: Arial, sans-serif;
+  font-size: clamp(12px, 2.8vw, 17px);
+  font-weight: 700;
+  line-height: 1.6;
+  letter-spacing: clamp(2px, 0.7vw, 4px);
+  text-align: center;
+}
+
+.welcome-indicators {
   position: absolute;
-  left: 0;
+  z-index: 3;
+  bottom: clamp(145px, 20vh, 190px);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  transform: translateX(-50%);
+}
+
+.indicator {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c8d4df;
+}
+
+.indicator.active {
+  width: 23px;
+  border-radius: 10px;
+  background: #6484a7;
+}
+
+.welcome-waves {
+  position: absolute;
+  z-index: 1;
   right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
 }
 
-#container strong {
-  font-size: 20px;
-  line-height: 26px;
+/* Tabletas */
+@media (min-width: 600px) {
+  .welcome-screen {
+    padding-bottom: 220px;
+  }
+
+  .welcome-logo {
+    width: min(55vw, 430px);
+  }
+
+  .welcome-waves {
+    height: 240px;
+  }
 }
 
-#container p {
-  font-size: 16px;
-  line-height: 22px;
+/* Computadoras */
+@media (min-width: 1024px) {
+  .welcome-screen {
+    padding-bottom: 240px;
+  }
 
-  color: #8c8c8c;
+  .welcome-logo {
+    width: 390px;
+  }
 
-  margin: 0;
+  .welcome-waves {
+    height: 250px;
+  }
 }
 
-#container a {
-  text-decoration: none;
+/* Pantallas pequeñas o de poca altura */
+@media (max-height: 650px) {
+  .welcome-screen {
+    padding-top: 15px;
+    padding-bottom: 145px;
+  }
+
+  .welcome-logo {
+    width: min(55vw, 290px);
+    max-height: 40vh;
+  }
+
+  .welcome-tagline {
+    margin-top: 8px;
+  }
+
+  .welcome-indicators {
+    bottom: 115px;
+  }
+
+  .welcome-waves {
+    height: 125px;
+  }
 }

@@ -1,0 +1,13 @@
+<ion-content [fullscreen]="true" class="register-content">
+  <main class="register-screen">
+    @if (pantalla === 'tipos') {
+      <app-registro-tipos (seleccionado)="seleccionarTipo($event)" (login)="irALogin()" />
+    } @else if (pantalla === 'familia') {
+      <app-registro-familia (volver)="volverATipos()" (completado)="completarFamilia()" />
+    } @else if (pantalla === 'institucion' || pantalla === 'profesional') {
+      <app-registro-verificacion [tipo]="tipo!" (volver)="volverATipos()" (enviado)="enviarSolicitud()" />
+    } @else if (pantalla === 'confirmacion' || pantalla === 'pendiente') {
+      <app-estado-registro [pendiente]="pantalla === 'pendiente'" (nuevoRegistro)="volverATipos()" />
+    }
+  </main>
+</ion-content>

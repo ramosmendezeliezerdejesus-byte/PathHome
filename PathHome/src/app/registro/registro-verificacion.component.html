@@ -1,0 +1,34 @@
+<header class="screen-header">
+  <button class="back-button" type="button" aria-label="Volver a seleccionar tipo" (click)="volver.emit()">‹</button>
+  <h1>Verificación · {{ tipo === 'institucion' ? 'Institución' : 'Profesional' }}</h1>
+</header>
+
+<p class="verification-intro">Completa tu registro y sube una foto clara de tu carnet o título profesional. El administrador la revisará y te dará acceso.</p>
+
+<form class="register-form" (ngSubmit)="enviarSolicitud()" novalidate>
+  <label class="field"><span>Nombre completo</span><input name="nombreCompleto" [(ngModel)]="nombre" autocomplete="name" [class.invalid]="validado && !nombre.trim()" />
+    @if (validado && !nombre.trim()) { <small>Este campo es obligatorio.</small> }
+  </label>
+  <label class="field"><span>Correo</span><input name="correo" [(ngModel)]="correo" type="email" autocomplete="email" placeholder="correo@ejemplo.com" [class.invalid]="validado && !correoValido(correo)" />
+    @if (validado && !correoValido(correo)) { <small>Introduce un correo válido.</small> }
+  </label>
+  <label class="field"><span>Cédula</span><input name="cedula" [(ngModel)]="cedula" inputmode="numeric" maxlength="13" placeholder="000-0000000-0" [class.invalid]="validado && !cedulaValida(cedula)" />
+    @if (validado && !cedulaValida(cedula)) { <small>Usa el formato 000-0000000-0.</small> }
+  </label>
+  @if (tipo === 'institucion') {
+    <label class="field"><span>Código institucional (opcional)</span><input name="codigoInstitucional" [(ngModel)]="codigo" /></label>
+  } @else {
+    <label class="field"><span>Código de exequátur (opcional)</span><input name="codigoExequatur" [(ngModel)]="codigo" /></label>
+  }
+  <label class="field"><span>Contraseña</span><input name="contrasena" [(ngModel)]="contrasena" type="password" autocomplete="new-password" placeholder="8+ caracteres, mayúscula y número" [class.invalid]="validado && !contrasenaValida(contrasena)" />
+    @if (validado && !contrasenaValida(contrasena)) { <small>Usa al menos 8 caracteres, una mayúscula y un número.</small> }
+  </label>
+  <div class="field photo-field">
+    <span>Foto de verificación</span>
+    <input class="file-input" id="verification-photo" type="file" accept="image/*" (change)="seleccionarFoto($event)" />
+    <label class="upload-area" for="verification-photo">📷 {{ nombreFoto || 'Subir foto del carnet o título' }}</label>
+    <button class="demo-photo" type="button" (click)="usarFotoDemo()">{{ fotoDemo ? 'Foto de ejemplo seleccionada' : 'Usar foto de ejemplo (demo)' }}</button>
+    @if (validado && !fotoDemo && !nombreFoto) { <small>Selecciona una foto de verificación.</small> }
+  </div>
+  <button class="primary-button" type="submit">Enviar solicitud</button>
+</form>

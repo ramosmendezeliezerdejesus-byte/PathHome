@@ -1,0 +1,236 @@
+
+<ion-content [fullscreen]="true" class="login-content">
+  <main class="login-layout">
+
+    <header class="login-header">
+      <img
+        class="login-logo"
+        src="assets/img/logo_login.png"
+        alt="PathHome - Cada historia merece un hogar"
+      />
+    </header>
+
+    <section class="login-card">
+      <div class="login-heading">
+        <h1>Iniciar sesión</h1>
+        <p>Accede a tu cuenta para continuar con el proceso de adopción.</p>
+      </div>
+
+      <form class="login-form" (ngSubmit)="iniciarSesion()" novalidate>
+
+        <div class="form-field">
+          <label for="correo" hidden>Correo electrónico</label>
+
+          <div class="input-wrapper">
+            <ion-icon name="mail-outline"></ion-icon>
+
+            <ion-input
+              id="correo"
+              name="correo"
+              type="email"
+              aria-label="Correo electrónico"
+              inputmode="email"
+              autocomplete="email"
+              placeholder="Correo electrónico"
+              [(ngModel)]="correo"
+              [class.input-invalid]="enviado && !correoValido">
+            </ion-input>
+          </div>
+
+          @if (enviado && !correoValido) {
+            <span class="error-message">
+              Introduce un correo electrónico válido.
+            </span>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="contrasena" hidden>Contraseña</label>
+
+          <div class="input-wrapper">
+            <ion-icon name="lock-closed-outline"></ion-icon>
+
+            <ion-input
+              id="contrasena"
+              name="contrasena"
+              aria-label="Contraseña"
+              [type]="mostrarPassword ? 'text' : 'password'"
+              autocomplete="current-password"
+              placeholder="Contraseña"
+              [(ngModel)]="contrasena"
+              [class.input-invalid]="enviado && !contrasenaValida">
+            </ion-input>
+
+            <button
+              type="button"
+              class="password-toggle"
+              (click)="mostrarPassword = !mostrarPassword"
+              [attr.aria-label]="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+              <ion-icon
+                [name]="mostrarPassword ? 'eye-off-outline' : 'eye-outline'">
+              </ion-icon>
+            </button>
+          </div>
+
+          @if (enviado && !contrasenaValida) {
+            <span class="error-message">
+              Introduce tu contraseña.
+            </span>
+          }
+        </div>
+
+        <div class="forgot-password">
+          <button type="button" (click)="mostrarRecuperacion()">
+            ¿Olvidaste tu contraseña?
+          </button>
+        </div>
+
+        <ion-button
+          class="login-button"
+          type="submit"
+          expand="block">
+          Iniciar sesión
+        </ion-button>
+
+      </form>
+
+      <div class="social-divider" aria-hidden="true">
+        <span></span>
+        <p>o continúa con</p>
+        <span></span>
+      </div>
+
+      <div class="social-options" aria-label="Opciones de acceso visuales">
+        <div class="social-option" aria-label="Google (opción visual)">
+          <svg class="google-mark" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5.1h6.6c3.9-3.6 6.1-8.8 6.1-15Z"/>
+            <path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.9l-6.6-5.1c-1.8 1.2-4.1 2-6.9 2-5.3 0-9.8-3.6-11.4-8.4H5.8v5.3A20 20 0 0 0 24 44Z"/>
+            <path fill="#FBBC05" d="M12.6 27.6a12 12 0 0 1 0-7.2v-5.3H5.8a20 20 0 0 0 0 17.8l6.8-5.3Z"/>
+            <path fill="#EA4335" d="M24 12c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 6.1 29.5 4 24 4A20 20 0 0 0 5.8 15.1l6.8 5.3C14.2 15.6 18.7 12 24 12Z"/>
+          </svg>
+        </div>
+
+        <div class="social-option" aria-label="Apple (opción visual)">
+          <svg class="apple-mark" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M16.37 12.3c.02 2.19 1.92 2.92 1.94 2.93-.02.05-.3 1.04-.98 2.06-.59.88-1.2 1.76-2.16 1.78-.94.02-1.25-.57-2.33-.57s-1.42.55-2.31.59c-.92.04-1.62-.95-2.22-1.82-1.22-1.78-2.15-5.02-.9-7.21.62-1.09 1.73-1.78 2.93-1.8.91-.02 1.77.62 2.33.62.56 0 1.61-.77 2.71-.66.46.02 1.76.19 2.6 1.44-.07.04-1.55.9-1.61 2.64ZM14.59 6.87c.49-.59.82-1.41.73-2.23-.71.03-1.57.47-2.08 1.06-.46.53-.86 1.36-.75 2.16.79.06 1.61-.4 2.1-.99Z"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="register-link">
+        <span>¿No tienes cuenta?</span>
+        <button type="button" (click)="mostrarRegistro()">
+          Regístrate
+        </button>
+      </div>
+
+      @if (aviso) {
+        <div class="notice-message" role="status">
+          {{ aviso }}
+        </div>
+      }
+    </section>
+
+    <section class="admin-section">
+
+      <div class="admin-heading">
+        <div class="admin-icon">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+        </div>
+
+        <div>
+          <h2>Acceso del administrador</h2>
+          <p>Área exclusiva para personal autorizado.</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="admin-toggle"
+        (click)="adminAbierto = !adminAbierto"
+        [attr.aria-expanded]="adminAbierto">
+        {{ adminAbierto ? 'Cerrar acceso' : 'Acceder como administrador' }}
+
+        <ion-icon
+          [name]="adminAbierto ? 'chevron-up-outline' : 'chevron-down-outline'">
+        </ion-icon>
+      </button>
+
+      @if (adminAbierto) {
+        <form
+          class="admin-form"
+          (ngSubmit)="iniciarSesionAdmin()"
+          novalidate>
+
+          <div class="form-field">
+            <label for="adminCorreo">Correo del administrador</label>
+
+            <div class="input-wrapper">
+              <ion-icon name="mail-outline"></ion-icon>
+
+              <ion-input
+                id="adminCorreo"
+                name="adminCorreo"
+                type="email"
+                inputmode="email"
+                autocomplete="username"
+                placeholder="admin@ejemplo.com"
+                [(ngModel)]="adminCorreo"
+                [class.input-invalid]="adminEnviado && !adminCorreoValido">
+              </ion-input>
+            </div>
+
+            @if (adminEnviado && !adminCorreoValido) {
+              <span class="error-message">
+                Introduce un correo válido.
+              </span>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="adminPassword">Contraseña</label>
+
+            <div class="input-wrapper">
+              <ion-icon name="lock-closed-outline"></ion-icon>
+
+              <ion-input
+                id="adminPassword"
+                name="adminPassword"
+                [type]="mostrarAdminPassword ? 'text' : 'password'"
+                autocomplete="current-password"
+                placeholder="Introduce tu contraseña"
+                [(ngModel)]="adminPassword"
+                [class.input-invalid]="adminEnviado && !adminPassword">
+              </ion-input>
+
+              <button
+                type="button"
+                class="password-toggle"
+                (click)="mostrarAdminPassword = !mostrarAdminPassword"
+                [attr.aria-label]="mostrarAdminPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                <ion-icon
+                  [name]="mostrarAdminPassword ? 'eye-off-outline' : 'eye-outline'">
+                </ion-icon>
+              </button>
+            </div>
+
+            @if (adminEnviado && !adminPassword) {
+              <span class="error-message">
+                Introduce la contraseña.
+              </span>
+            }
+          </div>
+
+          <ion-button
+            class="admin-login-button"
+            type="submit"
+            expand="block">
+            Acceder al área administrativa
+          </ion-button>
+
+        </form>
+      }
+    </section>
+
+  </main>
+</ion-content>
