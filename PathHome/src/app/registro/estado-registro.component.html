@@ -3,11 +3,11 @@
     <div class="status-mark pending-mark" aria-hidden="true">…</div>
     <h1>Solicitud lista</h1>
     <p>Estado: pendiente de aprobación.</p>
-    <p>El administrador revisará tu información antes de darte acceso.</p>
+    <p>{{ mensaje || 'El administrador revisará tu información antes de darte acceso.' }}</p>
   } @else {
     <div class="status-mark success-mark" aria-hidden="true">✓</div>
     <h1>Formulario completado</h1>
-    <p>Los datos de tu registro de familia fueron validados.</p>
+    <p>{{ mensaje || 'Los datos de tu registro de familia fueron validados.' }}</p>
   }
   <button class="primary-button" type="button" (click)="irALogin()">Volver a iniciar sesión</button>
   <button class="secondary-button" type="button" (click)="nuevoRegistro.emit()">Volver a crear cuenta</button>

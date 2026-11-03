@@ -53,7 +53,7 @@
   text-align: center;
 }
 
-.welcome-indicators {
+.loading-status {
   position: absolute;
   z-index: 3;
   bottom: clamp(145px, 20vh, 190px);
@@ -61,22 +61,39 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 11px;
+  gap: 9px;
+  color: #6484a7;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
   transform: translateX(-50%);
 }
 
-.indicator {
-  display: block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #c8d4df;
+.loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.indicator.active {
-  width: 23px;
-  border-radius: 10px;
+.loading-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
   background: #6484a7;
+  animation: loading-bounce 0.9s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes loading-bounce {
+  0%, 60%, 100% { opacity: 0.45; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-5px); }
 }
 
 .welcome-waves {
@@ -137,7 +154,7 @@
     margin-top: 8px;
   }
 
-  .welcome-indicators {
+  .loading-status {
     bottom: 115px;
   }
 

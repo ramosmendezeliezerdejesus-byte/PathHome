@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SupabaseService } from '../core/supabase/supabase.service';
 
 @Component({
   selector: 'app-registro-familia',
@@ -10,8 +11,10 @@ import { FormsModule } from '@angular/forms';
 })
 export class RegistroFamiliaComponent {
   @Output() volver = new EventEmitter<void>();
-  @Output() completado = new EventEmitter<void>();
+  @Output() completado = new EventEmitter<string>();
   enviado = false;
+  procesando = false;
+  aviso = '';
   familia = {
     nombre: '',
     apellido: '',
@@ -21,6 +24,8 @@ export class RegistroFamiliaComponent {
     contrasena: '',
     confirmacion: '',
   };
+
+  constructor(private readonly supabase: SupabaseService) {}
 
   correoValido(value: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
@@ -40,6 +45,7 @@ export class RegistroFamiliaComponent {
 
   crearCuenta(): void {
     this.enviado = true;
+    this.aviso = '';
     if (
       this.familia.nombre.trim() &&
       this.familia.apellido.trim() &&
@@ -49,7 +55,38 @@ export class RegistroFamiliaComponent {
       this.contrasenaValida(this.familia.contrasena) &&
       this.familia.confirmacion === this.familia.contrasena
     ) {
-      this.completado.emit();
+      void this.crearCuentaEnSupabase();
+    }
+  }
+
+  private async crearCuentaEnSupabase(): Promise<void> {
+    this.procesando = true;
+
+    try {
+      const { data, error } = await this.supabase.client.auth.signUp({
+        email: this.familia.correo.trim(),
+        password: this.familia.contrasena,
+        options: {
+          data: {
+            account_type: 'familia',
+            full_name: `${this.familia.nombre.trim()} ${this.familia.apellido.trim()}`,
+            national_id: this.familia.cedula.trim(),
+            phone: this.familia.telefono.trim(),
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      this.completado.emit(
+        data.session
+          ? 'Tu cuenta de familia quedó creada. Ya puedes iniciar sesión.'
+          : 'Tu cuenta quedó creada. Revisa tu correo y confirma la dirección antes de iniciar sesión.',
+      );
+    } catch (error) {
+      this.aviso = error instanceof Error ? error.message : 'No se pudo crear la cuenta.';
+    } finally {
+      this.procesando = false;
     }
   }
 }

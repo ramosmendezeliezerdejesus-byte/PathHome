@@ -3,11 +3,11 @@
     @if (pantalla === 'tipos') {
       <app-registro-tipos (seleccionado)="seleccionarTipo($event)" (login)="irALogin()" />
     } @else if (pantalla === 'familia') {
-      <app-registro-familia (volver)="volverATipos()" (completado)="completarFamilia()" />
+      <app-registro-familia (volver)="volverATipos()" (completado)="completarFamilia($event)" />
     } @else if (pantalla === 'institucion' || pantalla === 'profesional') {
       <app-registro-verificacion [tipo]="tipo!" (volver)="volverATipos()" (enviado)="enviarSolicitud()" />
     } @else if (pantalla === 'confirmacion' || pantalla === 'pendiente') {
-      <app-estado-registro [pendiente]="pantalla === 'pendiente'" (nuevoRegistro)="volverATipos()" />
+      <app-estado-registro [pendiente]="pantalla === 'pendiente'" [mensaje]="confirmacionMensaje" (nuevoRegistro)="volverATipos()" />
     }
   </main>
 </ion-content>

@@ -30,5 +30,6 @@
     <button class="demo-photo" type="button" (click)="usarFotoDemo()">{{ fotoDemo ? 'Foto de ejemplo seleccionada' : 'Usar foto de ejemplo (demo)' }}</button>
     @if (validado && !fotoDemo && !nombreFoto) { <small>Selecciona una foto de verificación.</small> }
   </div>
-  <button class="primary-button" type="submit">Enviar solicitud</button>
+  @if (aviso) { <p class="form-feedback" role="alert">{{ aviso }}</p> }
+  <button class="primary-button" type="submit" [disabled]="procesando">{{ procesando ? 'Enviando…' : 'Enviar solicitud' }}</button>
 </form>

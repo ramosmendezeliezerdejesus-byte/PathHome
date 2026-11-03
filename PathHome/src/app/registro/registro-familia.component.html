@@ -27,5 +27,6 @@
   <label class="field"><span>Confirmar contraseña</span><input name="confirmacion" [(ngModel)]="familia.confirmacion" type="password" autocomplete="new-password" [class.invalid]="enviado && familia.confirmacion !== familia.contrasena" />
     @if (enviado && familia.confirmacion !== familia.contrasena) { <small>Las contraseñas deben coincidir.</small> }
   </label>
-  <button class="primary-button" type="submit">Crear cuenta</button>
+  @if (aviso) { <p class="form-feedback" role="alert">{{ aviso }}</p> }
+  <button class="primary-button" type="submit" [disabled]="procesando">{{ procesando ? 'Creando cuenta…' : 'Crear cuenta' }}</button>
 </form>

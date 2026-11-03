@@ -25,6 +25,7 @@ type RegistrationScreen = 'tipos' | AccountType | 'confirmacion' | 'pendiente';
 export class RegistroPage {
   pantalla: RegistrationScreen = 'tipos';
   tipo: AccountType | null = null;
+  confirmacionMensaje = '';
 
   constructor(private readonly router: Router) {}
 
@@ -33,6 +34,7 @@ export class RegistroPage {
   }
 
   seleccionarTipo(tipo: AccountType): void {
+    this.confirmacionMensaje = '';
     this.tipo = tipo;
     this.pantalla = tipo;
   }
@@ -42,7 +44,8 @@ export class RegistroPage {
     this.pantalla = 'tipos';
   }
 
-  completarFamilia(): void {
+  completarFamilia(mensaje: string): void {
+    this.confirmacionMensaje = mensaje;
     this.pantalla = 'confirmacion';
   }
 

@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { IonButton, IonContent, IonIcon, IonInput } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { RecuperarContrasenaComponent } from './recuperar-contrasena.component';
+import { SupabaseService } from '../core/supabase/supabase.service';
 import {
   mailOutline,
   lockClosedOutline,
@@ -45,7 +46,10 @@ export class LoginPage {
   aviso = '';
   pantallaRecuperacion = false;
 
-  constructor(private readonly router: Router) {
+  constructor(
+    private readonly router: Router,
+    private readonly supabase: SupabaseService,
+  ) {
     addIcons({
       'mail-outline': mailOutline,
       'lock-closed-outline': lockClosedOutline,
@@ -71,7 +75,7 @@ export class LoginPage {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  iniciarSesion(): void {
+  async iniciarSesion(): Promise<void> {
     this.enviado = true;
     this.aviso = '';
 
@@ -80,11 +84,20 @@ export class LoginPage {
       return;
     }
 
-    this.aviso =
-      'El formulario está completo, pero la autenticación todavía no está implementada.';
+    try {
+      const { error } = await this.supabase.client.auth.signInWithPassword({
+        email: this.correo.trim(),
+        password: this.contrasena,
+      });
+
+      if (error) throw error;
+      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+    } catch (error) {
+      this.aviso = this.mensajeError(error);
+    }
   }
 
-  iniciarSesionAdmin(): void {
+  async iniciarSesionAdmin(): Promise<void> {
     this.adminEnviado = true;
     this.aviso = '';
 
@@ -93,8 +106,32 @@ export class LoginPage {
       return;
     }
 
-    this.aviso =
-      'El formulario administrativo está completo, pero el acceso todavía no está conectado.';
+    try {
+      const { data, error } = await this.supabase.client.auth.signInWithPassword({
+        email: this.adminCorreo.trim(),
+        password: this.adminPassword,
+      });
+
+      if (error) throw error;
+
+      const { data: profile, error: profileError } = await this.supabase.client
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      if (!profile.is_admin) {
+        await this.supabase.client.auth.signOut();
+        this.aviso = 'Esta cuenta no tiene permisos de administrador.';
+        return;
+      }
+
+      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+    } catch (error) {
+      this.aviso = this.mensajeError(error);
+    }
   }
 
   mostrarRecuperacion(): void {
@@ -109,5 +146,9 @@ export class LoginPage {
 
   mostrarRegistro(): void {
     void this.router.navigateByUrl('/registro');
+  }
+
+  private mensajeError(error: unknown): string {
+    return error instanceof Error ? error.message : 'No se pudo iniciar sesión. Inténtalo de nuevo.';
   }
 }

@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
 })
 export class EstadoRegistroComponent {
   @Input() pendiente = false;
+  @Input() mensaje = '';
   @Output() nuevoRegistro = new EventEmitter<void>();
 
   constructor(private readonly router: Router) {}
