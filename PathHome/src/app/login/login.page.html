@@ -130,9 +130,9 @@
         </button>
       </div>
 
-      @if (aviso) {
-        <div class="notice-message" role="status">
-          {{ aviso }}
+      @if (aviso()) {
+        <div class="error-message" role="alert">
+          {{ aviso() }}
         </div>
       }
     </section>

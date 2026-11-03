@@ -3,9 +3,10 @@ import { Router } from '@angular/router';
 import { IonContent } from '@ionic/angular';
 
 @Component({
-  selector: 'app-home',
+  selector: 'app-landing',
   templateUrl: 'landing.page.html',
   styleUrls: ['landing.page.scss'],
+  standalone: true,
   imports: [IonContent],
 })
 export class LandingPage implements OnInit, OnDestroy {

@@ -85,7 +85,8 @@ export class RegistroVerificacionComponent {
   }
 
   private async enviarSolicitudASupabase(): Promise<void> {
-    if (this.tipo === 'familia') {
+    const accountType = this.tipo;
+    if (accountType === 'familia') {
       this.aviso = 'Este formulario solo sirve para instituciones y profesionales.';
       return;
     }
@@ -128,9 +129,14 @@ export class RegistroVerificacionComponent {
         }
       }
 
+      const userId = this.usuarioId;
+      if (!userId) {
+        throw new Error('No se pudo identificar la cuenta. Inicia sesión e inténtalo otra vez.');
+      }
+
       await this.supabase.submitVerification({
-        userId: this.usuarioId,
-        accountType: this.tipo,
+        userId,
+        accountType,
         verificationCode: this.codigo,
         file: this.archivo!,
       });

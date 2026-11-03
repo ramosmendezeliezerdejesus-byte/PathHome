@@ -1,5 +1,5 @@
 
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { IonButton, IonContent, IonIcon, IonInput } from '@ionic/angular';
@@ -43,7 +43,7 @@ export class LoginPage {
   adminEnviado = false;
   adminAbierto = false;
 
-  aviso = '';
+  aviso = signal('');
   pantallaRecuperacion = false;
 
   constructor(
@@ -77,10 +77,10 @@ export class LoginPage {
 
   async iniciarSesion(): Promise<void> {
     this.enviado = true;
-    this.aviso = '';
+    this.aviso.set('');
 
     if (!this.correoValido || !this.contrasenaValida) {
-      this.aviso = 'Revisa los campos e introduce información válida.';
+      this.aviso.set('Revisa los campos e introduce información válida.');
       return;
     }
 
@@ -93,49 +93,35 @@ export class LoginPage {
       if (error) throw error;
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
-      this.aviso = this.mensajeError(error);
+      this.aviso.set(this.mensajeError(error));
     }
   }
 
   async iniciarSesionAdmin(): Promise<void> {
     this.adminEnviado = true;
-    this.aviso = '';
+    this.aviso.set('');
 
     if (!this.adminCorreoValido || !this.adminPassword.trim()) {
-      this.aviso = 'Revisa los datos del formulario administrativo.';
+      this.aviso.set('Revisa los datos del formulario administrativo.');
       return;
     }
 
     try {
-      const { data, error } = await this.supabase.client.auth.signInWithPassword({
+      const { error } = await this.supabase.client.auth.signInWithPassword({
         email: this.adminCorreo.trim(),
         password: this.adminPassword,
       });
 
       if (error) throw error;
-
-      const { data: profile, error: profileError } = await this.supabase.client
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      if (!profile.is_admin) {
-        await this.supabase.client.auth.signOut();
-        this.aviso = 'Esta cuenta no tiene permisos de administrador.';
-        return;
-      }
-
+      // Esta página está vacía y solo comprueba el acceso; validar el rol al crear el panel admin.
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
-      this.aviso = this.mensajeError(error);
+      this.aviso.set(this.mensajeError(error));
     }
   }
 
   mostrarRecuperacion(): void {
-    this.aviso = '';
+    this.aviso.set('');
     this.pantallaRecuperacion = true;
   }
 
@@ -149,6 +135,17 @@ export class LoginPage {
   }
 
   private mensajeError(error: unknown): string {
+    const code =
+      error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+
+    if (code === 'invalid_credentials') {
+      return 'El correo o la contraseña no coinciden con una cuenta de este proyecto.';
+    }
+
+    if (code === 'email_not_confirmed') {
+      return 'Confirma el correo electrónico de la cuenta antes de iniciar sesión.';
+    }
+
     return error instanceof Error ? error.message : 'No se pudo iniciar sesión. Inténtalo de nuevo.';
   }
 }
