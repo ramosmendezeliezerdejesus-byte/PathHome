@@ -42,6 +42,7 @@ export class LoginPage {
   enviado = false;
   adminEnviado = false;
   adminAbierto = false;
+  googleProcesando = false;
 
   aviso = signal('');
   pantallaRecuperacion = false;
@@ -97,6 +98,25 @@ export class LoginPage {
     }
   }
 
+  async iniciarSesionGoogle(): Promise<void> {
+    if (this.googleProcesando) return;
+
+    this.googleProcesando = true;
+    this.aviso.set('');
+
+    try {
+      const { error } = await this.supabase.client.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${window.location.origin}/dashboard` },
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      this.googleProcesando = false;
+      this.aviso.set(this.mensajeErrorGoogle(error));
+    }
+  }
+
   async iniciarSesionAdmin(): Promise<void> {
     this.adminEnviado = true;
     this.aviso.set('');
@@ -147,5 +167,15 @@ export class LoginPage {
     }
 
     return error instanceof Error ? error.message : 'No se pudo iniciar sesión. Inténtalo de nuevo.';
+  }
+
+  private mensajeErrorGoogle(error: unknown): string {
+    const message = error instanceof Error ? error.message : '';
+
+    if (/provider.*(not enabled|disabled)|unsupported provider/i.test(message)) {
+      return 'El acceso con Google todavía no está activado en Supabase.';
+    }
+
+    return message || 'No se pudo iniciar sesión con Google. Inténtalo de nuevo.';
   }
 }
