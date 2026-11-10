@@ -131,10 +131,10 @@ export class PsychologistPage {
   ];
 
   readonly notifications: NotificationItem[] = [
-    { id: 1, category: 'Expedientes', title: 'Expediente asignado', description: 'Nuevo expediente de ejemplo disponible en la lista local.', when: 'Ahora', icon: '📁', tone: 'blue-tone', read: false },
-    { id: 2, category: 'Evaluaciones', title: 'Evaluación pendiente', description: 'Hay una evaluación demostrativa pendiente de revisión.', when: 'Hace 2 h', icon: '📝', tone: 'lilac-tone', read: false },
-    { id: 3, category: 'Citas', title: 'Cita de demostración', description: 'La agenda contiene una cita de ejemplo vinculada a un expediente.', when: 'Hace 1 día', icon: '🗓️', tone: 'pink-tone', read: true },
-    { id: 4, category: 'Sistema', title: 'Vista de demostración', description: 'La información mostrada no se sincroniza con servicios externos.', when: 'Hace 2 días', icon: 'ℹ️', tone: 'blue-tone', read: true },
+    { id: 1, category: 'Expedientes', title: 'Expediente asignado', description: 'Nuevo expediente de ejemplo disponible en la lista local.', when: 'Ahora', icon: 'folder', tone: 'blue-tone', read: false },
+    { id: 2, category: 'Evaluaciones', title: 'Evaluación pendiente', description: 'Hay una evaluación demostrativa pendiente de revisión.', when: 'Hace 2 h', icon: 'edit', tone: 'lilac-tone', read: false },
+    { id: 3, category: 'Citas', title: 'Cita de demostración', description: 'La agenda contiene una cita de ejemplo vinculada a un expediente.', when: 'Hace 1 día', icon: 'calendar', tone: 'pink-tone', read: true },
+    { id: 4, category: 'Sistema', title: 'Vista de demostración', description: 'La información mostrada no se sincroniza con servicios externos.', when: 'Hace 2 días', icon: 'info', tone: 'blue-tone', read: true },
   ];
 
   readonly appointmentForm = { caseId: '2025-0147', type: 'Entrevista inicial', date: '', time: '', note: '' };
