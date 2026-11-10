@@ -1,7 +1,13 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonContent } from '@ionic/angular';
+import { IonContent, IonIcon } from '@ionic/angular';
 import { SupabaseService } from '../core/supabase/supabase.service';
+import { addIcons } from 'ionicons';
+import {
+  calendarOutline, checkmarkCircleOutline, chatbubbleEllipsesOutline, documentTextOutline,
+  folderOpenOutline, gridOutline, helpCircleOutline, homeOutline, informationCircleOutline,
+  logOutOutline, notificationsOutline, personOutline, settingsOutline,
+} from 'ionicons/icons';
 
 type DashboardSection = 'inicio' | 'proceso' | 'notificaciones' | 'perfil';
 type NotificationFilter = 'Todas' | 'Citas' | 'Documentos' | 'Sistema';
@@ -21,7 +27,7 @@ interface DashboardNotification {
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.scss'],
   standalone: true,
-  imports: [IonContent],
+  imports: [IonContent, IonIcon],
 })
 export class DashboardPage {
   activeSection: DashboardSection = 'inicio';
@@ -34,18 +40,18 @@ export class DashboardPage {
   readonly filters: NotificationFilter[] = ['Todas', 'Citas', 'Documentos', 'Sistema'];
 
   readonly stages = [
-    { name: 'Documentación', status: 'Completado · 15 abr 2025', icon: '✓', current: false, complete: true },
-    { name: 'Entrevista inicial', status: 'Completado · 22 abr 2025', icon: '✓', current: false, complete: true },
-    { name: 'Evaluación psicológica', status: 'En curso · 10 may 2025', icon: '👤', current: true, complete: false },
-    { name: 'Estudio social', status: 'Pendiente', icon: '▤', current: false, complete: false },
-    { name: 'Autorización institucional', status: 'Pendiente', icon: '▤', current: false, complete: false },
-    { name: 'Seguimiento', status: 'Pendiente', icon: '▤', current: false, complete: false },
+    { name: 'Documentación', status: 'Completado · 15 abr 2025', icon: 'checkmark-circle-outline', current: false, complete: true },
+    { name: 'Entrevista inicial', status: 'Completado · 22 abr 2025', icon: 'checkmark-circle-outline', current: false, complete: true },
+    { name: 'Evaluación psicológica', status: 'En curso · 10 may 2025', icon: 'person-outline', current: true, complete: false },
+    { name: 'Estudio social', status: 'Pendiente', icon: 'document-text-outline', current: false, complete: false },
+    { name: 'Autorización institucional', status: 'Pendiente', icon: 'document-text-outline', current: false, complete: false },
+    { name: 'Seguimiento', status: 'Pendiente', icon: 'document-text-outline', current: false, complete: false },
   ];
 
   readonly notifications: DashboardNotification[] = [
     {
       category: 'Citas',
-      icon: '🗓️',
+      icon: 'calendar-outline',
       tone: 'appointment',
       title: 'Nueva cita agendada',
       description: 'Evaluación psicológica · 10 de mayo de 2025 · 10:00 a. m.',
@@ -54,7 +60,7 @@ export class DashboardPage {
     },
     {
       category: 'Documentos',
-      icon: '📄',
+      icon: 'document-text-outline',
       tone: 'document',
       title: 'Documento pendiente',
       description: 'Informe médico. Por favor, sube tu documento.',
@@ -63,7 +69,7 @@ export class DashboardPage {
     },
     {
       category: 'Sistema',
-      icon: 'ℹ️',
+      icon: 'information-circle-outline',
       tone: 'system',
       title: 'Avance en tu proceso',
       description: 'Has completado la etapa de entrevista inicial.',
@@ -72,7 +78,7 @@ export class DashboardPage {
     },
     {
       category: 'Sistema',
-      icon: 'ℹ️',
+      icon: 'information-circle-outline',
       tone: 'system',
       title: 'Información importante',
       description: 'Recuerda mantener tus datos actualizados.',
@@ -81,7 +87,7 @@ export class DashboardPage {
     },
     {
       category: 'Citas',
-      icon: '🗓️',
+      icon: 'calendar-outline',
       tone: 'appointment',
       title: 'Nueva cita agendada',
       description: 'Reunión con la institución · 25 de abril, 2:00 p. m.',
@@ -94,6 +100,11 @@ export class DashboardPage {
     private readonly router: Router,
     private readonly supabase: SupabaseService,
   ) {
+    addIcons({
+      calendarOutline, checkmarkCircleOutline, chatbubbleEllipsesOutline, documentTextOutline,
+      folderOpenOutline, gridOutline, helpCircleOutline, homeOutline, informationCircleOutline,
+      logOutOutline, notificationsOutline, personOutline, settingsOutline,
+    });
     void this.loadProfile();
     this.supabase.client.auth.onAuthStateChange((_event, session) => {
       if (session?.user) this.applyUser(session.user);
