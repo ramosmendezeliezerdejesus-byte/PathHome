@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { IonContent } from '@ionic/angular';
+import { SupabaseService } from '../core/supabase/supabase.service';
 
 type PsychologistSection = 'inicio' | 'expedientes' | 'evaluaciones' | 'citas' | 'informes' | 'notificaciones' | 'perfil';
 type RecordStatus = 'Pendiente' | 'En progreso' | 'Completada';
@@ -100,14 +101,14 @@ export class PsychologistPage {
 
   readonly cases: PsychologistCase[] = [
     {
-      id: '2025-0147', name: 'Ana Rodríguez', status: 'Evaluación psicológica pendiente', tone: 'lilac', documents: '',
+      id: '2025-0147', name: 'Expediente 2025-0147', status: 'Evaluación psicológica pendiente', tone: 'lilac', documents: '',
       childInfo: {
-        name: 'Valentina', age: '7 años', sex: 'Niña', height: '1.20 m', favoriteColor: 'Rosa', music: 'Pop',
+        name: 'No especificado', age: 'No especificada', sex: 'No especificado', height: 'No especificada', favoriteColor: 'No especificado', music: 'No especificada',
         hobbies: 'Baile · Dibujo', favoriteFoods: 'Pizza · Frutas', personality: 'Alegre, creativa y empática',
         familyWish: 'Quiero una familia que me quiera, me escuche y con la que pueda seguir soñando.', privateNotes: '',
       },
     },
-    { id: '2025-0136', name: 'Familia Santana', status: 'Evaluación registrada', tone: 'mint', documents: '' },
+    { id: '2025-0136', name: 'Expediente 2025-0136', status: 'Evaluación registrada', tone: 'mint', documents: '' },
   ];
 
   readonly caseFilters = ['Todos', 'Pendientes', 'Registrados'];
@@ -116,8 +117,8 @@ export class PsychologistPage {
   readonly notificationFilters = ['Todas', 'Citas', 'Expedientes', 'Evaluaciones', 'Sistema'];
 
   readonly evaluations: Evaluation[] = [
-    { id: 1, caseId: '2025-0147', caseName: 'Ana Rodríguez', title: 'Evaluación psicológica', status: 'Pendiente', updated: 'Pendiente de revisión · Demo', observations: '', results: '', recommendations: '' },
-    { id: 2, caseId: '2025-0136', caseName: 'Familia Santana', title: 'Evaluación psicológica', status: 'Completada', updated: 'Registro demostrativo existente', observations: '', results: '', recommendations: '' },
+    { id: 1, caseId: '2025-0147', caseName: 'Expediente 2025-0147', title: 'Evaluación psicológica', status: 'Pendiente', updated: 'Pendiente de revisión · Demo', observations: '', results: '', recommendations: '' },
+    { id: 2, caseId: '2025-0136', caseName: 'Expediente 2025-0136', title: 'Evaluación psicológica', status: 'Completada', updated: 'Registro demostrativo existente', observations: '', results: '', recommendations: '' },
   ];
 
   readonly appointments: Appointment[] = [
@@ -141,11 +142,35 @@ export class PsychologistPage {
   readonly reportDraft = { caseId: '2025-0147', title: '', conclusions: '', recommendations: '' };
 
   profile = {
-    name: 'Dra. Laura Méndez', email: 'psico@pathhome.com', phone: '', specialty: 'Psicóloga especializada',
+    name: 'Usuario', email: '', phone: '', specialty: 'Psicóloga especializada',
     education: '', credentials: '', institution: '', officeHours: '',
   };
 
-  constructor(private readonly router: Router) {}
+  constructor(
+    private readonly router: Router,
+    private readonly supabase: SupabaseService,
+  ) {
+    void this.loadProfile();
+    this.supabase.client.auth.onAuthStateChange((_event, session) => {
+      this.applyUser(session?.user ?? null);
+    });
+  }
+
+  private async loadProfile(): Promise<void> {
+    const { data } = await this.supabase.client.auth.getUser();
+    this.applyUser(data.user);
+  }
+
+  private applyUser(user: { email?: string; user_metadata?: Record<string, unknown> } | null): void {
+    if (!user) return;
+    const metadata = user.user_metadata ?? {};
+    const name = metadata['full_name'] ?? metadata['name'] ?? metadata['display_name'];
+    this.profile.name = typeof name === 'string' && name.trim()
+      ? name.trim()
+      : user.email?.split('@')[0]?.replace(/[._-]+/g, ' ') ?? 'Usuario';
+    this.profile.email = user.email ?? '';
+    if (typeof metadata['phone'] === 'string') this.profile.phone = metadata['phone'];
+  }
 
   get filteredCases(): PsychologistCase[] {
     const query = this.caseSearch.trim().toLocaleLowerCase('es');
@@ -345,6 +370,14 @@ export class PsychologistPage {
     reader.onerror = () => { this.profileFeedback = 'No se pudo abrir la imagen seleccionada.'; };
     reader.readAsDataURL(file);
   }
-  saveProfile(): void { this.profileFeedback = 'Cambios guardados solo en esta vista de demostración.'; }
-  async signOut(): Promise<void> { await this.router.navigateByUrl('/login'); }
+  async saveProfile(): Promise<void> {
+    const { error } = await this.supabase.client.auth.updateUser({
+      data: { full_name: this.profile.name.trim(), phone: this.profile.phone.trim() },
+    });
+    this.profileFeedback = error ? 'No se pudo guardar la información.' : 'Información personal guardada.';
+  }
+  async signOut(): Promise<void> {
+    await this.supabase.client.auth.signOut();
+    await this.router.navigateByUrl('/login');
+  }
 }

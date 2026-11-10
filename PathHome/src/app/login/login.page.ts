@@ -86,12 +86,23 @@ export class LoginPage {
     }
 
     try {
-      const { error } = await this.supabase.client.auth.signInWithPassword({
+      const { data, error } = await this.supabase.client.auth.signInWithPassword({
         email: this.correo.trim(),
         password: this.contrasena,
       });
 
       if (error) throw error;
+      const metadata = data.user.user_metadata ?? {};
+      const hasName = ['full_name', 'fullName', 'name', 'display_name', 'given_name', 'first_name', 'firstName', 'nombre']
+        .some((key) => typeof metadata[key] === 'string' && (metadata[key] as string).trim());
+      if (!hasName) {
+        const emailName = data.user.email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim();
+        if (emailName) {
+          await this.supabase.client.auth.updateUser({
+            data: { full_name: emailName.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase()) },
+          });
+        }
+      }
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (error) {
       this.aviso.set(this.mensajeError(error));

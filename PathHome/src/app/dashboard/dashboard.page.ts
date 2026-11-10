@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonContent } from '@ionic/angular';
+import { SupabaseService } from '../core/supabase/supabase.service';
 
 type DashboardSection = 'inicio' | 'proceso' | 'notificaciones' | 'perfil';
 type NotificationFilter = 'Todas' | 'Citas' | 'Documentos' | 'Sistema';
@@ -27,8 +28,9 @@ export class DashboardPage {
   activeFilter: NotificationFilter = 'Todas';
   assistantOpen = false;
   notificationsEnabled = true;
-  readonly demoName = 'Ana Rodríguez';
-  readonly demoEmail = 'ana.demo@example.test';
+  profileName = '';
+  profileEmail = '';
+  profileRole = 'Familia solicitante';
   readonly filters: NotificationFilter[] = ['Todas', 'Citas', 'Documentos', 'Sistema'];
 
   readonly stages = [
@@ -88,7 +90,50 @@ export class DashboardPage {
     },
   ];
 
-  constructor(private readonly router: Router) {}
+  constructor(
+    private readonly router: Router,
+    private readonly supabase: SupabaseService,
+  ) {
+    void this.loadProfile();
+    this.supabase.client.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) this.applyUser(session.user);
+    });
+  }
+
+  get firstName(): string {
+    const firstName = this.profileName.trim().split(/\s+/)[0];
+    return firstName
+      ? firstName.toLocaleLowerCase('es').replace(/^\p{L}/u, (letter) => letter.toLocaleUpperCase('es'))
+      : 'Usuario';
+  }
+
+  private async loadProfile(): Promise<void> {
+    const { data } = await this.supabase.client.auth.getUser();
+    if (data.user) this.applyUser(data.user);
+    else this.profileName = 'Usuario';
+  }
+
+  private applyUser(user: { email?: string; user_metadata?: Record<string, unknown> } | null): void {
+    if (!user) return;
+    const metadata = user.user_metadata ?? {};
+    const metadataName = metadata['full_name']
+      ?? metadata['fullName']
+      ?? metadata['name']
+      ?? metadata['display_name']
+      ?? metadata['given_name']
+      ?? metadata['first_name']
+      ?? metadata['nombre'];
+    const emailName = user.email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim();
+    this.profileName = typeof metadataName === 'string' && metadataName.trim()
+      ? metadataName.trim()
+      : emailName
+        ? emailName.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase())
+        : 'Usuario';
+    this.profileEmail = user.email ?? '';
+    this.profileRole = metadata['account_type'] === 'psicologo'
+      ? 'Psicólogo/a'
+      : 'Familia solicitante';
+  }
 
   get visibleNotifications(): DashboardNotification[] {
     return this.activeFilter === 'Todas'
@@ -118,6 +163,7 @@ export class DashboardPage {
   }
 
   async signOut(): Promise<void> {
+    await this.supabase.client.auth.signOut();
     await this.router.navigateByUrl('/login');
   }
 }

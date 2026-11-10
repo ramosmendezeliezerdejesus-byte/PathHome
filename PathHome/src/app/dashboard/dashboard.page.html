@@ -1,12 +1,12 @@
 <ion-content [fullscreen]="true" class="dashboard-content">
   <main class="dashboard-shell">
-    <span class="demo-note">Datos de ejemplo</span>
+    <span class="demo-note">Tu cuenta</span>
     @if (activeSection === 'inicio') {
     <section class="view home-view" aria-labelledby="home-title">
       <header class="welcome-header">
         <div class="avatar" aria-hidden="true">👤</div>
         <div class="welcome-copy">
-          <h1 id="home-title">Hola, Ana</h1>
+          <h1 id="home-title">@if (profileName) { Hola, {{ firstName }} } @else { Cargando tu perfil… }</h1>
           <p>Tu proceso de adopción<br />está en marcha</p>
         </div>
         <div class="rainbow-decoration" aria-hidden="true"></div>
@@ -154,9 +154,9 @@
       <article class="card profile-summary">
         <div class="avatar avatar-large" aria-hidden="true">👤</div>
         <div>
-          <h2>{{ demoName }}</h2>
-          <p>Familia solicitante</p>
-          <p>{{ demoEmail }}</p>
+          <h2>{{ profileName }}</h2>
+          <p>{{ profileRole }}</p>
+          <p>{{ profileEmail }}</p>
         </div>
       </article>
       <div class="card profile-options">
