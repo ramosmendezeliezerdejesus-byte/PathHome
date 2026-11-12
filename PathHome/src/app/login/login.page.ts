@@ -103,7 +103,8 @@ export class LoginPage {
           });
         }
       }
-      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+      const destination = await this.supabase.getDestinationForUser(data.user.id);
+      await this.router.navigateByUrl(destination, { replaceUrl: true });
     } catch (error) {
       this.aviso.set(this.mensajeError(error));
     }
@@ -138,14 +139,18 @@ export class LoginPage {
     }
 
     try {
-      const { error } = await this.supabase.client.auth.signInWithPassword({
+      const { data, error } = await this.supabase.client.auth.signInWithPassword({
         email: this.adminCorreo.trim(),
         password: this.adminPassword,
       });
 
       if (error) throw error;
-      // Esta página está vacía y solo comprueba el acceso; validar el rol al crear el panel admin.
-      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+      const destination = await this.supabase.getDestinationForUser(data.user.id);
+      if (destination !== '/admin') {
+        await this.supabase.client.auth.signOut();
+        throw new Error('Esta cuenta no tiene permisos de administrador.');
+      }
+      await this.router.navigateByUrl('/admin', { replaceUrl: true });
     } catch (error) {
       this.aviso.set(this.mensajeError(error));
     }

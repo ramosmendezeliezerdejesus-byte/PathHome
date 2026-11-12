@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AccountType } from './registro-tipos.component';
 import { SupabaseService } from '../core/supabase/supabase.service';
@@ -27,7 +27,10 @@ export class RegistroVerificacionComponent {
   aviso = '';
   private usuarioId: string | null = null;
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly changeDetector: ChangeDetectorRef,
+  ) {}
 
   correoValido(value: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
@@ -144,8 +147,10 @@ export class RegistroVerificacionComponent {
       this.enviado.emit();
     } catch (error) {
       this.aviso = error instanceof Error ? error.message : 'No se pudo enviar la solicitud.';
+      this.changeDetector.markForCheck();
     } finally {
       this.procesando = false;
+      this.changeDetector.markForCheck();
     }
   }
 }

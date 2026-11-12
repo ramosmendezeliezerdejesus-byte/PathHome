@@ -1,0 +1,144 @@
+<ion-content class="admin-content">
+  <div class="admin-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/admin" aria-label="PathHome, panel administrador">PathHome</a>
+      <nav aria-label="Navegación administrativa">
+        @for (item of navigation; track item.id) {
+          <button type="button" [class.active]="activeSection === item.id" (click)="selectSection(item.id)">
+            <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      </nav>
+      <button class="logout" type="button" (click)="signOut()"><span aria-hidden="true">↪</span> Cerrar sesión</button>
+    </aside>
+
+    <main class="main-area">
+      @if (activeSection === 'solicitudes') {
+        <header class="page-heading">
+          <div class="heading-icon">🔑</div>
+          <div><h1>Panel del administrador</h1><p>Solicitudes de acceso por rol</p></div>
+        </header>
+
+        <section class="stats" aria-label="Resumen de solicitudes">
+          <div class="stat pending"><strong>{{ pendingCount }}</strong><span>Pendientes</span></div>
+          <div class="stat approved"><strong>{{ approvedCount }}</strong><span>Aprobadas</span></div>
+          <div class="stat rejected"><strong>{{ rejectedCount }}</strong><span>Rechazadas</span></div>
+        </section>
+
+        <section class="quick-links" aria-label="Secciones administrativas">
+          <button type="button" class="quick create" (click)="selectSection('usuarios')"><span>＋</span>Usuarios y permisos</button>
+          <button type="button" class="quick cases" (click)="selectSection('expedientes')"><span>📋</span>Expedientes y etapas</button>
+          <button type="button" class="quick appointments" (click)="selectSection('citas')"><span>▦</span>Citas</button>
+          <button type="button" class="quick children" (click)="selectSection('expedientes')"><span>🧒</span>Información del niño</button>
+          <button type="button" class="quick notices" (click)="selectSection('reportes')"><span>📨</span>Notificaciones enviadas</button>
+          <button type="button" class="quick reports" (click)="selectSection('reportes')"><span>📝</span>Evaluaciones</button>
+        </section>
+
+        @if (notice) { <p class="notice" role="status">{{ notice }}</p> }
+        @if (error) { <p class="error" role="alert">{{ error }}</p> }
+
+        <section class="request-section">
+          <div class="section-title-row"><h2>Solicitudes</h2><button type="button" class="refresh" [disabled]="loading" (click)="loadData()">Actualizar</button></div>
+          @if (loading) {
+            <div class="empty-state">Cargando solicitudes…</div>
+          } @else if (requests.length === 0) {
+            <div class="empty-state"><strong>No hay solicitudes todavía</strong><span>Cuando un psicólogo o una institución envíe sus documentos, aparecerán aquí para revisión.</span></div>
+          } @else {
+            <div class="request-list">
+              @for (request of requests; track request.id) {
+                <article class="request-card">
+                  <div class="request-avatar">{{ request.account_type === 'profesional' ? '🧠' : '🏛️' }}</div>
+                  <div class="request-info">
+                    <strong>{{ request.full_name || 'Cuenta sin nombre' }}</strong>
+                    <span class="request-meta">{{ roleLabel(request.account_type) }} · {{ formatDate(request.created_at) }}</span>
+                    <span class="request-email">{{ request.email }}</span>
+                  </div>
+                  <span class="status" [class]="'status ' + request.status">{{ statusLabel(request.status) }}</span>
+                  <div class="request-actions">
+                    <button class="document-button" type="button" [disabled]="documentLoadingId !== null" (click)="openDocument(request)">{{ documentLoadingId === request.id ? 'Preparando…' : 'Ver documento' }}</button>
+                    @if (request.status === 'pendiente') {
+                      <button class="approve-button" type="button" (click)="askReview(request, 'aprobada')">Aprobar</button>
+                      <button class="reject-button" type="button" (click)="askReview(request, 'rechazada')">Rechazar</button>
+                    }
+                  </div>
+                  @if (documentErrorRequestId === request.id && documentError) {
+                    <p class="document-error" role="alert">{{ documentError }}</p>
+                  }
+                </article>
+              }
+            </div>
+          }
+        </section>
+      } @else if (activeSection === 'usuarios') {
+        <header class="page-heading">
+          <div class="heading-icon users-icon">♧</div>
+          <div><h1>Usuarios y permisos</h1><p>{{ users.length }} cuentas registradas</p></div>
+        </header>
+        <section class="user-stats">
+          <div><strong>{{ familyCount }}</strong><span>Familias</span></div>
+          <div><strong>{{ professionalCount }}</strong><span>Psicólogos</span></div>
+          <div><strong>{{ institutionCount }}</strong><span>Instituciones</span></div>
+        </section>
+        @if (error) { <p class="error" role="alert">{{ error }}</p> }
+        @if (loading) { <div class="empty-state">Cargando usuarios…</div> }
+        @else if (users.length === 0) { <div class="empty-state">No hay cuentas para mostrar.</div> }
+        @else {
+          <section class="user-list" aria-label="Usuarios registrados">
+            @for (user of users; track user.id) {
+              <article class="user-card">
+                <div class="request-avatar">{{ user.account_type === 'familia' ? '👨‍👩‍👧' : user.account_type === 'profesional' ? '🧠' : user.is_admin ? '🔑' : '🏛️' }}</div>
+                <div class="user-main"><strong>{{ user.full_name }}</strong><span>{{ user.email }}</span><small>{{ formatDate(user.created_at) }}</small></div>
+                <span class="role-chip">{{ user.is_admin ? 'Administrador' : roleLabel(user.account_type) }}</span>
+                @if (!user.is_admin && user.account_type !== 'familia') {
+                  <span class="status" [class]="'status ' + (user.verification_status || 'sin-solicitud')">{{ statusLabel(user.verification_status) }}</span>
+                } @else if (user.is_admin) {
+                  <span class="status aprobada">Administrador</span>
+                } @else {
+                  <span class="status aprobada">Activo</span>
+                }
+              </article>
+            }
+          </section>
+        }
+      } @else if (activeSection === 'perfil') {
+        <header class="page-heading"><div class="heading-icon">♙</div><div><h1>Perfil</h1><p>Sesión administrativa de PathHome</p></div></header>
+        <section class="placeholder"><span>🔑</span><h2>Administrador</h2><p>La cuenta está protegida por el rol de administrador registrado en Supabase.</p><button type="button" class="logout-button" (click)="signOut()">Cerrar sesión</button></section>
+      } @else {
+        <header class="page-heading"><div class="heading-icon">{{ activeSection === 'citas' ? '▦' : activeSection === 'reportes' ? '▥' : '▱' }}</div><div><h1>{{ activeSection === 'citas' ? 'Citas' : activeSection === 'reportes' ? 'Reportes y evaluaciones' : 'Expedientes y etapas' }}</h1><p>Panel del administrador</p></div></header>
+        <section class="placeholder"><span>🛠️</span><h2>Este apartado estará disponible más adelante</h2><p>Por ahora, puedes revisar solicitudes de psicólogos e instituciones y administrar la lista de usuarios.</p><button type="button" (click)="selectSection('solicitudes')">Volver a solicitudes</button></section>
+      }
+    </main>
+  </div>
+
+  @if (selectedRequest && reviewChoice) {
+    <div class="modal-backdrop" role="presentation">
+      <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="review-title">
+        <div class="dialog-mark" [class.reject-mark]="reviewChoice === 'rechazada'">{{ reviewChoice === 'aprobada' ? '✓' : '!' }}</div>
+        <h2 id="review-title">{{ reviewChoice === 'aprobada' ? 'Aprobar solicitud' : 'Rechazar solicitud' }}</h2>
+        <p>{{ selectedRequest.full_name }} · {{ roleLabel(selectedRequest.account_type) }}</p>
+        <p>{{ selectedRequest.email }} · Cédula: {{ selectedRequest.national_id }}@if (selectedRequest.verification_code) { · Código institucional: {{ selectedRequest.verification_code }} }</p>
+        <p class="dialog-note">{{ reviewChoice === 'aprobada' ? 'Al aprobarla, esta cuenta podrá entrar al apartado de su rol.' : 'Al rechazarla, esta cuenta no podrá entrar al apartado profesional o institucional.' }}</p>
+        <div class="dialog-actions"><button type="button" class="cancel-button" [disabled]="working" (click)="closeReview()">Cancelar</button><button type="button" [class]="reviewChoice === 'aprobada' ? 'approve-button' : 'reject-button'" [disabled]="working" (click)="confirmReview()">{{ working ? 'Guardando…' : reviewChoice === 'aprobada' ? 'Confirmar aprobación' : 'Confirmar rechazo' }}</button></div>
+      </section>
+    </div>
+  }
+
+</ion-content>
+
+@if (documentUrl) {
+  <div class="modal-backdrop document-backdrop" role="presentation" (click)="closeDocument()">
+    <section class="document-dialog" role="dialog" aria-modal="true" aria-label="Documento de verificación" (click)="$event.stopPropagation()">
+      <button type="button" class="document-close" aria-label="Cerrar documento" (click)="closeDocument()">×</button>
+      @if (documentPreviewFailed) {
+        <div class="document-fallback">
+          <span>No se pudo mostrar la vista previa.</span>
+          <a [href]="documentUrl" target="_blank" rel="noopener noreferrer">Abrir documento en otra pestaña</a>
+        </div>
+      } @else {
+        <img [src]="documentUrl" alt="Documento enviado para verificar la cuenta" (error)="onDocumentPreviewError()" />
+        <a class="document-open-link" [href]="documentUrl" target="_blank" rel="noopener noreferrer">Abrir en otra pestaña</a>
+      }
+    </section>
+  </div>
+}

@@ -6,7 +6,7 @@ create table public.profiles (
   account_type text not null default 'familia'
     check (account_type in ('familia', 'institucion', 'profesional')),
   full_name text not null,
-  national_id text not null unique
+  national_id text unique
     check (national_id ~ '^\d{3}-\d{7}-\d$'),
   phone text,
   created_at timestamptz not null default now(),
@@ -47,7 +47,11 @@ begin
       when requested_type in ('institucion', 'profesional') then requested_type
       else 'familia'
     end,
-    nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''),
+    coalesce(
+      nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''),
+      nullif(split_part(new.email, '@', 1), ''),
+      'Usuario'
+    ),
     nullif(trim(new.raw_user_meta_data ->> 'national_id'), ''),
     nullif(trim(new.raw_user_meta_data ->> 'phone'), '')
   );
