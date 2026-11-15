@@ -250,8 +250,12 @@
           <span class="profile-settings" aria-hidden="true"><ion-icon name="settings-outline"></ion-icon></span>
         </header>
         <article class="card profile-summary">
-          <div class="profile-avatar-placeholder" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></div>
-          <button class="profile-photo-option" type="button" disabled aria-label="Cambiar foto de perfil, opción visual no disponible">Cambiar foto</button>
+          <div class="profile-avatar-wrap">
+            <div class="profile-avatar-placeholder" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></div>
+            <button class="profile-photo-option" type="button" disabled aria-label="Cambiar foto de perfil, opción visual no disponible">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h3l1.4-2h7.2l1.4 2h3A1.5 1.5 0 0 1 21.5 9v9a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            </button>
+          </div>
           <div class="profile-summary-copy">
             <span class="demo-caption">Información de tu cuenta</span>
             <h2>{{ profileName }}</h2>
