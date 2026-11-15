@@ -1,234 +1,402 @@
 <ion-content [fullscreen]="true" class="dashboard-content">
+  <div class="dashboard-frame">
   <main class="dashboard-shell">
-    <span class="demo-note">Tu cuenta</span>
+    <p class="demo-note">Vista con datos demostrativos · no conectada a registros reales</p>
+
+    @if (localNotice) {
+      <div class="local-notice" role="status">
+        <span>{{ localNotice }}</span>
+        <button type="button" aria-label="Cerrar aviso" (click)="localNotice = ''">×</button>
+      </div>
+    }
+
     @if (activeSection === 'inicio') {
-    <section class="view home-view" aria-labelledby="home-title">
-      <header class="welcome-header">
-        <div class="avatar" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></div>
-        <div class="welcome-copy">
-          <h1 id="home-title">@if (profileName) { Hola, {{ firstName }} } @else { Cargando tu perfil… }</h1>
-          <p>Tu proceso de adopción<br />está en marcha</p>
-        </div>
-        <div class="rainbow-decoration" aria-hidden="true"></div>
-      </header>
-
-      <button class="card current-stage" type="button" (click)="showSection('proceso')">
-        <span class="stage-icon" aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span>
-        <span class="stage-copy">
-          <span class="eyebrow">Etapa actual</span>
-          <strong>Evaluación psicológica</strong>
-        </span>
-        <span class="chevron" aria-hidden="true">›</span>
-        <span
-          class="progress-track"
-          role="progressbar"
-          aria-label="Progreso: 3 de 6 etapas"
-          aria-valuemin="0"
-          aria-valuemax="6"
-          aria-valuenow="3"
-          ><span></span
-        ></span>
-        <span class="progress-label">3 de 6 etapas</span>
-      </button>
-
-      <div class="quick-grid" aria-label="Accesos rápidos">
-        <button class="card quick-card" type="button" (click)="openQuickLink('documentos')">
-          <span class="quick-icon folder" aria-hidden="true"><ion-icon name="folder-open-outline"></ion-icon></span>
-          <strong>Mis documentos</strong>
-        </button>
-        <button class="card quick-card" type="button" (click)="openQuickLink('citas')">
-          <span class="quick-icon calendar" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
-          <strong>Mis citas</strong>
-        </button>
-        <button class="card quick-card notification-shortcut" type="button" (click)="openQuickLink('notificaciones')">
-          <span class="quick-icon bell" aria-hidden="true"><ion-icon name="notifications-outline"></ion-icon></span>
-          <strong>Notificaciones</strong>
-          <span class="unread-badge" [attr.aria-label]="unreadCount + ' notificaciones sin leer'"
-            >{{ unreadCount }}</span
-          >
-        </button>
-        <button class="card quick-card" type="button" (click)="openQuickLink('mas')">
-          <span class="quick-icon more" aria-hidden="true">
-            <ion-icon name="grid-outline"></ion-icon>
+      <section class="view home-view" aria-labelledby="home-title">
+        <div class="home-topbar" aria-label="Accesos de la pantalla de inicio">
+          <span class="menu-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
           </span>
-          <strong>Más opciones</strong>
-        </button>
-      </div>
+          <span class="topbar-bell" aria-label="Notificaciones">
+            <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
+            @if (unreadCount) { <b>{{ unreadCount }}</b> }
+          </span>
+        </div>
 
-      <button class="assistant-card" type="button" [attr.aria-expanded]="assistantOpen" (click)="toggleAssistant()">
-        <span class="assistant-avatar" aria-hidden="true"><ion-icon name="chatbubble-ellipses-outline"></ion-icon></span>
-        <span class="assistant-copy">
-          <strong>Asistente virtual</strong>
-          <span>“¿Qué me falta para completar mi proceso?”</span>
-        </span>
-        <span class="chevron" aria-hidden="true">›</span>
-      </button>
-      @if (assistantOpen) {
-      <p class="assistant-reply" role="status">
-        Esta es una vista demostrativa. El asistente no consulta expedientes ni determina requisitos o decisiones.
-      </p>
-      }
-    </section>
-    } @if (activeSection === 'proceso') {
-    <section class="view process-view" aria-labelledby="process-title">
-      <header class="view-heading">
-        <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">
-          ‹
+        <header class="welcome-header">
+          <div class="avatar" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></div>
+          <div class="welcome-copy">
+            <h1 id="home-title">Hola, {{ firstName }}</h1>
+            <span class="profile-role">Familia solicitante</span>
+          </div>
+          <div class="rainbow-decoration" aria-hidden="true"></div>
+        </header>
+
+        <button class="card current-stage" type="button" (click)="showSection('proceso')">
+          <span class="progress-ring" role="img" aria-label="Progreso demostrativo del 60 por ciento"><span>60%</span></span>
+          <span class="current-stage-copy">
+            <strong>Tu proceso de adopción</strong>
+            <span>En evaluación psicológica</span>
+            <span class="stage-link">Ver detalles <span aria-hidden="true">›</span></span>
+          </span>
         </button>
-        <h1 id="process-title">Mi proceso</h1>
-      </header>
-      <div class="stage-list">
-        @for (stage of stages; track stage.name) {
-        <article class="stage-row" [class.stage-current]="stage.current" [class.stage-complete]="stage.complete">
-          <span class="stage-status-icon" [class.current-icon]="stage.current" aria-hidden="true"
-            ><ion-icon [name]="stage.icon"></ion-icon></span
-          >
-          <div class="stage-row-copy">
-            <h2>{{ stage.name }}</h2>
-            <p>{{ stage.status }}</p>
+
+        <div class="quick-grid" aria-label="Accesos rápidos">
+          <button class="card quick-card" type="button" (click)="openQuickLink('documentos')">
+            <span class="quick-icon folder" aria-hidden="true"><ion-icon name="folder-open-outline"></ion-icon></span>
+            <strong>Mis documentos</strong>
+          </button>
+          <button class="card quick-card" type="button" (click)="openQuickLink('citas')">
+            <span class="quick-icon calendar" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
+            <strong>Mis citas</strong>
+          </button>
+          <button class="card quick-card notification-shortcut" type="button" (click)="openQuickLink('notificaciones')">
+            <span class="quick-icon bell" aria-hidden="true"><ion-icon name="notifications-outline"></ion-icon></span>
+            <strong>Notificaciones</strong>
+            @if (unreadCount) { <span class="unread-badge" [attr.aria-label]="unreadCount + ' notificaciones sin leer'">{{ unreadCount }}</span> }
+          </button>
+          <button class="card quick-card" type="button" (click)="openQuickLink('mas')">
+            <span class="quick-icon more" aria-hidden="true"><ion-icon name="grid-outline"></ion-icon></span>
+            <strong>Más opciones</strong>
+          </button>
+        </div>
+
+        <button class="card next-appointment" type="button" (click)="openQuickLink('citas')">
+          <span class="appointment-icon" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
+          <span class="next-appointment-copy">
+            <strong>Próxima cita · demostración</strong>
+            <span>15 de noviembre · 10:00 a. m.</span>
+          </span>
+          <span class="chevron" aria-hidden="true">›</span>
+        </button>
+
+        <button class="card assistant-card" type="button" [attr.aria-expanded]="assistantOpen" (click)="toggleAssistant()">
+          <span class="assistant-avatar" aria-hidden="true"><ion-icon name="chatbubble-ellipses-outline"></ion-icon></span>
+          <span class="assistant-copy">
+            <strong>Asistente virtual</strong>
+            <span>“¿Qué me falta para completar mi proceso?”</span>
+          </span>
+          <span class="chevron" aria-hidden="true">›</span>
+        </button>
+        @if (assistantOpen) {
+          <p class="assistant-reply" role="status">
+            Esta es una vista demostrativa. El asistente no consulta expedientes ni determina requisitos o decisiones.
+          </p>
+        }
+
+      </section>
+    }
+
+    @if (activeSection === 'proceso') {
+      <section class="view process-view" aria-labelledby="process-title">
+        <header class="view-heading">
+          <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
+          <h1 id="process-title">Mi proceso</h1>
+        </header>
+        <p class="section-note">Etapas y estados de ejemplo · no representan una evaluación real</p>
+        <div class="stage-list">
+          @for (stage of stages; track stage.name) {
+            <article class="stage-row" [class.stage-current]="stage.current" [class.stage-complete]="stage.complete">
+              <span class="stage-status-icon" [class.current-icon]="stage.current" aria-hidden="true"><ion-icon [name]="stage.icon"></ion-icon></span>
+              <div class="stage-row-copy"><h2>{{ stage.name }}</h2><p>{{ stage.status }}</p></div>
+            </article>
+          }
+        </div>
+        <aside class="process-reminder">
+          <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
+          <p>Mantente atenta a tus notificaciones para conocer el siguiente paso.</p>
+        </aside>
+      </section>
+    }
+
+    @if (activeSection === 'documentos') {
+      <section class="view documents-view" aria-labelledby="documents-title">
+        <header class="view-heading">
+          <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
+          <h1 id="documents-title">Mis documentos</h1>
+        </header>
+        <p class="section-note">Contenido demostrativo. Los archivos seleccionados permanecen en este dispositivo y no se envían.</p>
+        <div class="segmented-tabs" role="tablist" aria-label="Secciones de documentos">
+          <button type="button" role="tab" [attr.aria-selected]="documentTab === 'requeridos'" [class.tab-selected]="documentTab === 'requeridos'" (click)="documentTab = 'requeridos'">Requeridos</button>
+          <button type="button" role="tab" [attr.aria-selected]="documentTab === 'subidos'" [class.tab-selected]="documentTab === 'subidos'" (click)="documentTab = 'subidos'">Subidos</button>
+        </div>
+
+        @if (documentTab === 'requeridos') {
+          <div class="document-list">
+            @for (document of requiredDocuments; track document.name) {
+              <article class="card document-row">
+                <span class="document-mark" [class.medical-document]="document.name === 'Informe médico'" aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span>
+                <span class="document-copy">
+                  <strong>{{ document.name }}</strong>
+                  <span>{{ document.description }}</span>
+                  @if (document.fileName) { <small>Seleccionado: {{ document.fileName }}</small> }
+                  @else if (document.demoProvided) { <small>Incluido en los datos de demostración</small> }
+                </span>
+                @if (document.demoProvided && !document.fileName) {
+                  <span class="document-state state-complete" aria-label="Documento de ejemplo"><ion-icon name="checkmark-circle-outline"></ion-icon></span>
+                } @else {
+                  <span class="upload-button">{{ document.fileName ? 'Cambiar' : 'Subir' }}</span>
+                }
+              </article>
+            }
+          </div>
+          <aside class="security-note">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5c0 4.7-2.9 8-7 10-4.1-2-7-5.3-7-10V6l7-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg>
+            <span>Tus documentos están seguros y solo son accesibles por personal autorizado.</span>
+          </aside>
+        } @else {
+          @if (selectedDocuments.length) {
+            <div class="document-list">
+              @for (document of selectedDocuments; track document.name) {
+                <article class="card document-row">
+                <span class="document-mark" [class.medical-document]="document.name === 'Informe médico'" aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span>
+                  <span class="document-copy">
+                    <strong>{{ document.name }}</strong>
+                    <span>{{ document.fileName || 'Incluido en los datos de demostración' }}</span>
+                  </span>
+                  <span class="document-state state-complete"><ion-icon name="checkmark-circle-outline"></ion-icon><span>{{ document.fileName ? 'Local' : 'Demo' }}</span></span>
+                </article>
+              }
+            </div>
+            <p class="demo-caption">Los elementos marcados como demo son ejemplos de la interfaz, no documentos enviados.</p>
+          } @else {
+            <div class="card empty-panel">
+              <span class="document-mark"><ion-icon name="folder-open-outline"></ion-icon></span>
+              <strong>Aún no has seleccionado archivos</strong>
+              <p>Los archivos elegidos desde “Requeridos” aparecerán aquí mientras esta vista permanezca abierta.</p>
+              <button class="text-action" type="button" (click)="documentTab = 'requeridos'">Ver documentos requeridos ›</button>
+            </div>
+          }
+        }
+      </section>
+    }
+
+    @if (activeSection === 'citas') {
+      <section class="view appointments-view" aria-labelledby="appointments-title">
+        <header class="view-heading">
+          <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
+          <h1 id="appointments-title">Mis citas</h1>
+        </header>
+        <p class="section-note">Citas de demostración · no son reservas ni notificaciones reales</p>
+        <div class="segmented-tabs" role="tablist" aria-label="Secciones de citas">
+          <button type="button" role="tab" [attr.aria-selected]="appointmentTab === 'proximas'" [class.tab-selected]="appointmentTab === 'proximas'" (click)="appointmentTab = 'proximas'">Próximas</button>
+          <button type="button" role="tab" [attr.aria-selected]="appointmentTab === 'historial'" [class.tab-selected]="appointmentTab === 'historial'" (click)="appointmentTab = 'historial'">Historial</button>
+        </div>
+
+        @if (appointmentTab === 'proximas') {
+          <div class="appointment-list">
+            @for (appointment of demoAppointments; track appointment.title; let i = $index) {
+              @if (i === 1) { <h2 class="appointments-subtitle">Otras citas</h2> }
+              <article class="card appointment-detail" [class.primary-appointment]="i === 0">
+                <span class="appointment-icon" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
+                <div class="appointment-detail-copy">
+                  <h2>{{ appointment.title }}</h2>
+                  <p><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{ appointment.date }} · {{ appointment.time }}</p>
+                  <p><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></svg>{{ appointment.location }}</p>
+                </div>
+                @if (i === 0) {
+                  <span class="calendar-button"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon><span>Agregar al calendario</span></span>
+                }
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="card empty-panel">
+            <span class="appointment-icon"><ion-icon name="calendar-outline"></ion-icon></span>
+            <strong>No hay citas anteriores en esta demostración</strong>
+            <p>El historial real de citas estará disponible al conectar el servicio.</p>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeSection === 'notificaciones') {
+      <section class="view notifications-view" aria-labelledby="notifications-title">
+        <header class="view-heading">
+          <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
+          <h1 id="notifications-title">Notificaciones</h1>
+        </header>
+        <p class="section-note">Avisos demostrativos · no corresponden a eventos reales de tu cuenta</p>
+        <div class="filter-list" role="group" aria-label="Filtrar notificaciones">
+          @for (filter of filters; track filter) {
+            <button type="button" [class.filter-selected]="activeFilter === filter" [attr.aria-pressed]="activeFilter === filter" (click)="activeFilter = filter">{{ filter }}</button>
+          }
+        </div>
+        @if (visibleNotifications.length) {
+          <div class="notification-list">
+            @for (notification of visibleNotifications; track notification.title + notification.date; let i = $index) {
+              @if (i < 4) {
+              <article class="notification-row">
+                <span class="notification-icon" [class.appointment]="notification.tone === 'appointment'" [class.document]="notification.tone === 'document'" aria-hidden="true"><ion-icon [name]="notification.icon"></ion-icon></span>
+                <div class="notification-copy">
+                  <h2>{{ notification.title }} @if (notification.unread) { <span class="unread-dot" aria-label="Sin leer"></span> }</h2>
+                  <p>{{ notification.description }}</p>
+                </div>
+                <time>{{ notification.date }}</time>
+              </article>
+              }
+            }
+          </div>
+        } @else {
+          <p class="empty-state">No hay notificaciones en esta categoría.</p>
+        }
+      </section>
+    }
+
+    @if (activeSection === 'perfil') {
+      <section class="view profile-view" aria-labelledby="profile-title">
+        <header class="profile-heading">
+          <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
+          <h1 id="profile-title">Perfil</h1>
+          <span class="profile-settings" aria-hidden="true"><ion-icon name="settings-outline"></ion-icon></span>
+        </header>
+        <article class="card profile-summary">
+          <div class="profile-avatar-placeholder" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></div>
+          <button class="profile-photo-option" type="button" disabled aria-label="Cambiar foto de perfil, opción visual no disponible">Cambiar foto</button>
+          <div class="profile-summary-copy">
+            <span class="demo-caption">Información de tu cuenta</span>
+            <h2>{{ profileName }}</h2>
+            <span class="profile-role">Familia solicitante</span>
+            <p>{{ profileEmail }}</p>
           </div>
         </article>
-        }
-      </div>
-      <article class="card appointment-card">
-        <span class="appointment-icon" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
-        <div>
-          <h2>Próxima cita · Evaluación psicológica</h2>
-          <p>10 de mayo de 2025 · 10:00 a. m.</p>
+        <div class="profile-options">
+          <button class="profile-option" type="button" (click)="showSection('datos')"><span aria-hidden="true"><ion-icon name="person-outline"></ion-icon></span><span class="option-label">Editar perfil</span><span class="chevron">›</span></button>
+          <button class="profile-option" type="button" (click)="showSection('documentos')"><span aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span><span class="option-label">Mis documentos</span><span class="chevron">›</span></button>
+          <button class="profile-option" type="button" (click)="showSection('citas')"><span aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span><span class="option-label">Mis citas</span><span class="chevron">›</span></button>
+          <button class="profile-option" type="button" (click)="notificationsEnabled = !notificationsEnabled"><span aria-hidden="true"><ion-icon name="notifications-outline"></ion-icon></span><span class="option-label">Preferencias de notificación</span><span class="switch" [class.switch-off]="!notificationsEnabled" role="img" [attr.aria-label]="notificationsEnabled ? 'Activadas' : 'Desactivadas'"><i></i></span></button>
+          <button class="profile-option" type="button" (click)="showSection('mensajes')"><span aria-hidden="true"><ion-icon name="help-circle-outline"></ion-icon></span><span class="option-label">Ayuda y soporte</span><span class="chevron">›</span></button>
+          <button class="profile-option logout-option" type="button" (click)="signOut()"><span aria-hidden="true"><ion-icon name="log-out-outline"></ion-icon></span><span class="option-label">Cerrar sesión</span><span class="chevron">›</span></button>
         </div>
-        <span class="chevron" aria-hidden="true">›</span>
-      </article>
-    </section>
-    } @if (activeSection === 'notificaciones') {
-    <section class="view notifications-view" aria-labelledby="notifications-title">
-      <header class="view-heading">
-        <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">
-          ‹
-        </button>
-        <h1 id="notifications-title">Notificaciones</h1>
-      </header>
-      <div class="filter-list" role="group" aria-label="Filtrar notificaciones">
-        @for (filter of filters; track filter) {
-        <button
-          type="button"
-          [class.filter-selected]="activeFilter === filter"
-          [attr.aria-pressed]="activeFilter === filter"
-          (click)="activeFilter = filter"
-        >
-          {{ filter }}
-        </button>
-        }
-      </div>
-      @if (visibleNotifications.length) {
-      <div class="notification-list">
-        @for (notification of visibleNotifications; track notification.title + notification.date) {
-        <article class="notification-row">
-          <span
-            class="notification-icon"
-            [class.appointment]="notification.tone === 'appointment'"
-            [class.document]="notification.tone === 'document'"
-            aria-hidden="true"
-            ><ion-icon [name]="notification.icon"></ion-icon></span
-          >
-          <div class="notification-copy">
-            <h2>
-              {{ notification.title }} @if (notification.unread) {
-              <span class="unread-dot" aria-label="Sin leer"></span> }
-            </h2>
-            <p>{{ notification.description }}</p>
+      </section>
+    }
+
+    @if (activeSection === 'mas') {
+      <section class="view more-view" aria-labelledby="more-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button><h1 id="more-title">Más opciones</h1></header>
+        <div class="more-intro"><strong>Tu cuenta y preferencias</strong><span>Gestiona tu información y consulta los recursos de PATHOME.</span></div>
+        <div class="profile-options">
+          <button class="profile-option" type="button" (click)="showSection('perfil')"><span class="option-icon profile-tone" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Mi perfil</span><small>Consulta los datos de tu familia</small></span><span class="chevron">›</span></button>
+          <button class="profile-option" type="button" (click)="showSection('seguridad')"><span class="option-icon security-tone" aria-hidden="true"><ion-icon name="lock-closed-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Seguridad y privacidad</span><small>Protección de tu información personal</small></span><span class="chevron">›</span></button>
+          <button class="profile-option" type="button" (click)="showSection('preferencias')"><span class="option-icon notifications-tone" aria-hidden="true"><ion-icon name="notifications-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Preferencias de notificaciones</span><small>Elige qué avisos quieres recibir</small></span><span class="chevron">›</span></button>
+          <button class="profile-option" type="button" (click)="showSection('ayuda')"><span class="option-icon help-tone" aria-hidden="true"><ion-icon name="help-circle-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Ayuda y soporte</span><small>Encuentra respuestas y orientación</small></span><span class="chevron">›</span></button>
+          <button class="profile-option" type="button" (click)="showSection('informacion')"><span class="option-icon information-tone" aria-hidden="true"><ion-icon name="information-circle-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Información de PATHOME</span><small>Conoce el propósito del proyecto</small></span><span class="chevron">›</span></button>
+          <button class="profile-option" type="button" (click)="showSection('terminos')"><span class="option-icon terms-tone" aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Términos y privacidad</span><small>Consulta el uso y cuidado de tus datos</small></span><span class="chevron">›</span></button>
+          <button class="profile-option logout-option" type="button" (click)="confirmSignOut()"><span class="option-icon logout-tone" aria-hidden="true"><ion-icon name="log-out-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Cerrar sesión</span><small>Salir de tu cuenta de PATHOME</small></span><span class="chevron">›</span></button>
+        </div>
+      </section>
+    }
+
+    @if (activeSection === 'seguridad') {
+      <section class="view detail-view options-detail-view" aria-labelledby="security-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="security-title">Seguridad y privacidad</h1></header>
+        <article class="card options-info-card"><span class="option-detail-icon security-tone"><ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon></span><div><h2>Protección de tu información</h2><p>Los documentos de tu proceso se muestran en tu cuenta. La información del niño o niña permanece protegida y solo debe consultarse cuando exista autorización.</p></div></article>
+        <article class="card options-info-card"><span class="option-detail-icon blue-tone"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon></span><div><h2>Acceso responsable</h2><p>Comparte tus datos únicamente con el personal autorizado que acompaña tu proceso de adopción.</p></div></article>
+        <p class="section-note">Consulta los términos oficiales de PATHOME para conocer las condiciones completas del tratamiento de datos.</p>
+      </section>
+    }
+
+    @if (activeSection === 'preferencias') {
+      <section class="view detail-view options-detail-view" aria-labelledby="preferences-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="preferences-title">Preferencias de notificaciones</h1></header>
+        <p class="section-note">Elige los avisos que quieres recibir.</p>
+        <div class="profile-options preference-list">
+          <button class="profile-option preference-option" type="button" role="switch" [attr.aria-checked]="appointmentNotificationsEnabled" (click)="appointmentNotificationsEnabled = !appointmentNotificationsEnabled"><span aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span><span class="option-label">Citas</span><span class="switch" [class.switch-off]="!appointmentNotificationsEnabled"><i></i></span></button>
+          <button class="profile-option preference-option" type="button" role="switch" [attr.aria-checked]="documentNotificationsEnabled" (click)="documentNotificationsEnabled = !documentNotificationsEnabled"><span aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span><span class="option-label">Documentos</span><span class="switch" [class.switch-off]="!documentNotificationsEnabled"><i></i></span></button>
+          <button class="profile-option preference-option" type="button" role="switch" [attr.aria-checked]="progressNotificationsEnabled" (click)="progressNotificationsEnabled = !progressNotificationsEnabled"><span aria-hidden="true"><ion-icon name="checkmark-circle-outline"></ion-icon></span><span class="option-label">Avances del proceso</span><span class="switch" [class.switch-off]="!progressNotificationsEnabled"><i></i></span></button>
+        </div>
+        <p class="section-note">Estos cambios se mantienen en esta sesión y todavía no se sincronizan con tu cuenta.</p>
+      </section>
+    }
+
+    @if (activeSection === 'ayuda') {
+      <section class="view detail-view options-detail-view" aria-labelledby="help-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="help-title">Ayuda y soporte</h1></header>
+        <article class="card faq-card"><h2>¿Dónde consulto los documentos que debo presentar?</h2><p>Abre “Mi proceso” y entra en “Mis documentos” para revisar los documentos requeridos y su estado.</p></article>
+        <article class="card faq-card"><h2>¿Dónde veo mi próxima cita?</h2><p>Consulta “Mis citas” desde el Inicio para ver la fecha, hora y ubicación disponibles.</p></article>
+        <article class="card faq-card"><h2>¿Cómo reviso el avance de mi proceso?</h2><p>En “Mi proceso” puedes consultar las etapas, los estados y los avisos disponibles.</p></article>
+        <button class="support-contact" type="button" (click)="showSection('mensajes')"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon><span>Contactar con soporte</span><span class="chevron">›</span></button>
+        <p class="section-note">El canal de mensajes puede depender de la disponibilidad de la institución.</p>
+      </section>
+    }
+
+    @if (activeSection === 'informacion') {
+      <section class="view detail-view options-detail-view" aria-labelledby="about-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="about-title">Información de PATHOME</h1></header>
+        <article class="card about-card"><span class="about-mark" aria-hidden="true">PathHome</span><h2>Cada historia merece un hogar</h2><p>PATHOME acompaña a las familias solicitantes durante el proceso de adopción y facilita el seguimiento de sus etapas, documentos, citas y comunicaciones con los profesionales e instituciones.</p><p>La decisión de cada proceso corresponde a las autoridades y profesionales responsables.</p></article>
+      </section>
+    }
+
+    @if (activeSection === 'terminos') {
+      <section class="view detail-view options-detail-view" aria-labelledby="terms-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="terms-title">Términos y privacidad</h1></header>
+        <p class="section-note">Información general sobre el uso de PATHOME.</p>
+        <article class="card faq-card"><h2>Uso de la plataforma</h2><p>Utiliza tu cuenta para consultar información del proceso y mantener tus datos de contacto actualizados.</p></article>
+        <article class="card faq-card"><h2>Privacidad de la información</h2><p>Los datos personales y documentos del proceso deben ser consultados por la familia y el personal autorizado para su atención.</p></article>
+        <article class="card faq-card"><h2>Contenido oficial</h2><p>Esta pantalla presenta información resumida. Consulta los términos oficiales publicados por PATHOME para conocer las condiciones completas.</p></article>
+      </section>
+    }
+
+    @if (activeSection === 'asistente' || activeSection === 'mensajes') {
+      <section class="view conversation-view" aria-labelledby="conversation-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="conversation-title">{{ activeSection === 'asistente' ? 'Asistente virtual' : 'Mensajes' }}</h1></header>
+        <p class="section-note">{{ activeSection === 'asistente' ? 'Consulta información general de tu proceso.' : 'Comunicación con la institución.' }}</p>
+        <article class="card conversation-card">
+          <span class="assistant-avatar" aria-hidden="true"><ion-icon [name]="activeSection === 'asistente' ? 'chatbubble-ellipses-outline' : 'help-circle-outline'"></ion-icon></span>
+          <div class="conversation-copy">
+            <strong>{{ activeSection === 'asistente' ? '¿Qué me falta para completar mi proceso?' : 'Tu espacio de mensajes' }}</strong>
+            <p>{{ activeSection === 'asistente' ? 'Consulta tus documentos, citas y etapas desde sus secciones.' : 'Aquí podrás revisar la comunicación de tu proceso.' }}</p>
           </div>
-          <time>{{ notification.date }}</time>
         </article>
+        @if (activeSection === 'asistente') {
+          <div class="reply-chips" aria-label="Temas de ayuda"><span>Documentos pendientes</span><span>Próxima cita</span><span>Etapas del proceso</span></div>
         }
-      </div>
-      } @else {
-      <p class="empty-state">No hay notificaciones en esta categoría.</p>
-      }
-    </section>
-    } @if (activeSection === 'perfil') {
-    <section class="view profile-view" aria-labelledby="profile-title">
-      <header class="profile-heading">
-        <span aria-hidden="true"><ion-icon name="settings-outline"></ion-icon></span>
-        <h1 id="profile-title">Mi perfil</h1>
-      </header>
-      <article class="card profile-summary">
-        <div class="avatar avatar-large" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></div>
-        <div>
-          <h2>{{ profileName }}</h2>
-          <p>{{ profileRole }}</p>
-          <p>{{ profileEmail }}</p>
-        </div>
-      </article>
-      <div class="card profile-options">
-        <div class="profile-option">
-          <span aria-hidden="true"><ion-icon name="person-outline"></ion-icon></span><span class="option-label">Editar perfil</span
-          ><span class="chevron">›</span>
-        </div>
-        <div class="profile-option">
-          <span aria-hidden="true"><ion-icon name="home-outline"></ion-icon></span><span class="option-label">Datos del hogar</span
-          ><span class="chevron">›</span>
-        </div>
-        <button class="profile-option" type="button" (click)="showSection('proceso')">
-          <span aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span><span class="option-label">Mis documentos</span
-          ><span class="chevron">›</span>
-        </button>
-        <button class="profile-option" type="button" (click)="showSection('proceso')">
-          <span aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span><span class="option-label">Mis citas</span><span class="chevron">›</span>
-        </button>
-        <button class="profile-option" type="button" (click)="notificationsEnabled = !notificationsEnabled">
-          <span aria-hidden="true"><ion-icon name="notifications-outline"></ion-icon></span><span class="option-label">Notificaciones</span>
-          <span
-            class="switch"
-            [class.switch-off]="!notificationsEnabled"
-            role="img"
-            [attr.aria-label]="notificationsEnabled ? 'Activadas' : 'Desactivadas'"
-            ><i></i
-          ></span>
-        </button>
-        <div class="profile-option">
-          <span aria-hidden="true"><ion-icon name="help-circle-outline"></ion-icon></span><span class="option-label">Ayuda y soporte</span
-          ><span class="chevron">›</span>
-        </div>
-        <button class="profile-option logout-option" type="button" (click)="signOut()">
-          <span aria-hidden="true"><ion-icon name="log-out-outline"></ion-icon></span><span class="option-label">Cerrar sesión</span><span class="chevron">›</span>
-        </button>
-      </div>
-    </section>
+        <div class="conversation-input" aria-disabled="true"><span>Escribe un mensaje…</span><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon></div>
+      </section>
+    }
+
+    @if (activeSection === 'hogar') {
+      <section class="view detail-view" aria-labelledby="household-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="household-title">Datos del hogar</h1></header>
+        <p class="section-note">Información del entorno familiar</p>
+        <article class="card empty-panel"><span class="appointment-icon"><ion-icon name="home-outline"></ion-icon></span><strong>Información del hogar</strong><p>Los datos del hogar aparecerán aquí cuando estén disponibles en tu cuenta.</p></article>
+      </section>
+    }
+
+    @if (activeSection === 'solicitud') {
+      <section class="view detail-view" aria-labelledby="application-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="application-title">Solicitud de adopción</h1></header>
+        <p class="section-note">Estado de la solicitud</p>
+        <article class="card empty-panel"><span class="appointment-icon"><ion-icon name="document-text-outline"></ion-icon></span><strong>Solicitud</strong><p>El estado y los detalles de la solicitud se mostrarán cuando estén disponibles en tu cuenta.</p></article>
+      </section>
+    }
+
+    @if (activeSection === 'menor') {
+      <section class="view detail-view" aria-labelledby="child-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="child-title">Perfil del niño</h1></header>
+        <article class="card protected-panel"><span class="protected-icon"><ion-icon name="information-circle-outline"></ion-icon></span><h2>Perfil protegido</h2><p>La información personal de niños, niñas y adolescentes se mantiene protegida y solo se muestra cuando existe autorización.</p></article>
+      </section>
+    }
+
+    @if (activeSection === 'seguimiento') {
+      <section class="view detail-view" aria-labelledby="followup-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="followup-title">Seguimiento posterior</h1></header>
+        <article class="card empty-panel"><span class="appointment-icon"><ion-icon name="checkmark-circle-outline"></ion-icon></span><strong>Seguimiento</strong><p>Esta sección corresponde a una etapa posterior del proceso.</p></article>
+      </section>
+    }
+
+    @if (activeSection === 'datos') {
+      <section class="view detail-view" aria-labelledby="personal-data-title">
+        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a perfil" (click)="showSection('perfil')">‹</button><h1 id="personal-data-title">Editar perfil</h1></header>
+        <article class="card demo-fields"><label><span>Nombre completo</span><input [value]="profileName" readonly /></label><label><span>Correo electrónico</span><input [value]="profileEmail" readonly /></label><p>La edición estará disponible cuando el servicio de perfil esté conectado.</p></article>
+      </section>
     }
   </main>
 
   <nav class="bottom-nav" aria-label="Navegación del panel familiar">
-    <button
-      type="button"
-      [class.nav-active]="activeSection === 'inicio'"
-      [attr.aria-current]="activeSection === 'inicio' ? 'page' : null"
-      (click)="showSection('inicio')"
-    >
-      <ion-icon name="home-outline" aria-hidden="true"></ion-icon><span>Inicio</span>
-    </button>
-    <button
-      type="button"
-      [class.nav-active]="activeSection === 'proceso'"
-      [attr.aria-current]="activeSection === 'proceso' ? 'page' : null"
-      (click)="showSection('proceso')"
-    >
-      <ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span>Mi proceso</span>
-    </button>
-    <button
-      type="button"
-      [class.nav-active]="activeSection === 'notificaciones'"
-      [attr.aria-current]="activeSection === 'notificaciones' ? 'page' : null"
-      (click)="showSection('notificaciones')"
-    >
-      <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon><span>Notificaciones</span><b class="nav-badge">{{ unreadCount }}</b>
-    </button>
-    <button
-      type="button"
-      [class.nav-active]="activeSection === 'perfil'"
-      [attr.aria-current]="activeSection === 'perfil' ? 'page' : null"
-      (click)="showSection('perfil')"
-    >
-      <ion-icon name="person-outline" aria-hidden="true"></ion-icon><span>Perfil</span>
-    </button>
+    <button type="button" [class.nav-active]="primarySection === 'inicio'" [attr.aria-current]="primarySection === 'inicio' ? 'page' : null" (click)="showSection('inicio')"><ion-icon name="home-outline" aria-hidden="true"></ion-icon><span>Inicio</span></button>
+    <button type="button" [class.nav-active]="primarySection === 'proceso'" [attr.aria-current]="primarySection === 'proceso' ? 'page' : null" (click)="showSection('proceso')"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span>Mi proceso</span></button>
+    <button type="button" [class.nav-active]="primarySection === 'notificaciones'" [attr.aria-current]="primarySection === 'notificaciones' ? 'page' : null" (click)="showSection('notificaciones')"><ion-icon name="notifications-outline" aria-hidden="true"></ion-icon><span>Notificaciones</span>@if (unreadCount) { <b class="nav-badge">{{ unreadCount }}</b> }</button>
+    <button type="button" [class.nav-active]="primarySection === 'perfil'" [attr.aria-current]="primarySection === 'perfil' ? 'page' : null" (click)="showSection('perfil')"><ion-icon name="person-outline" aria-hidden="true"></ion-icon><span>Perfil</span></button>
   </nav>
+  </div>
 </ion-content>
