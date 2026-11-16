@@ -14,7 +14,12 @@ type AdminSection = 'solicitudes' | 'usuarios' | 'expedientes' | 'citas' | 'repo
   standalone: true,
   imports: [IonContent],
   templateUrl: './admin.page.html',
-  styleUrls: ['./admin.page.scss'],
+  styleUrls: [
+    './admin.page.scss',
+    './admin.requests.scss',
+    './admin.users.scss',
+    './admin.dialogs.scss',
+  ],
 })
 export class AdminPage {
   activeSection: AdminSection = 'solicitudes';

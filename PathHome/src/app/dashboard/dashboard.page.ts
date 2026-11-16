@@ -1,16 +1,18 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonContent, IonIcon } from '@ionic/angular';
+import { AlertController, IonContent, IonIcon } from '@ionic/angular';
 import { SupabaseService } from '../core/supabase/supabase.service';
 import { addIcons } from 'ionicons';
 import {
   calendarOutline, checkmarkCircleOutline, chatbubbleEllipsesOutline, documentTextOutline,
   folderOpenOutline, gridOutline, helpCircleOutline, homeOutline, informationCircleOutline,
-  logOutOutline, notificationsOutline, personOutline, settingsOutline,
+  lockClosedOutline, logOutOutline, notificationsOutline, personOutline, settingsOutline,
 } from 'ionicons/icons';
 
-type DashboardSection = 'inicio' | 'proceso' | 'notificaciones' | 'perfil';
+type DashboardSection = 'inicio' | 'proceso' | 'documentos' | 'citas' | 'notificaciones' | 'perfil' | 'mas' | 'asistente' | 'mensajes' | 'hogar' | 'solicitud' | 'menor' | 'seguimiento' | 'datos' | 'seguridad' | 'preferencias' | 'ayuda' | 'informacion' | 'terminos';
 type NotificationFilter = 'Todas' | 'Citas' | 'Documentos' | 'Sistema';
+type DocumentTab = 'requeridos' | 'subidos';
+type AppointmentTab = 'proximas' | 'historial';
 
 interface DashboardNotification {
   category: Exclude<NotificationFilter, 'Todas'>;
@@ -32,20 +34,39 @@ interface DashboardNotification {
 export class DashboardPage {
   activeSection: DashboardSection = 'inicio';
   activeFilter: NotificationFilter = 'Todas';
+  documentTab: DocumentTab = 'requeridos';
+  appointmentTab: AppointmentTab = 'proximas';
   assistantOpen = false;
   notificationsEnabled = true;
+  appointmentNotificationsEnabled = true;
+  documentNotificationsEnabled = true;
+  progressNotificationsEnabled = true;
+  localNotice = '';
   profileName = '';
   profileEmail = '';
   profileRole = 'Familia solicitante';
   readonly filters: NotificationFilter[] = ['Todas', 'Citas', 'Documentos', 'Sistema'];
 
   readonly stages = [
-    { name: 'Documentación', status: 'Completado · 15 abr 2025', icon: 'checkmark-circle-outline', current: false, complete: true },
-    { name: 'Entrevista inicial', status: 'Completado · 22 abr 2025', icon: 'checkmark-circle-outline', current: false, complete: true },
-    { name: 'Evaluación psicológica', status: 'En curso · 10 may 2025', icon: 'person-outline', current: true, complete: false },
-    { name: 'Estudio social', status: 'Pendiente', icon: 'document-text-outline', current: false, complete: false },
-    { name: 'Autorización institucional', status: 'Pendiente', icon: 'document-text-outline', current: false, complete: false },
-    { name: 'Seguimiento', status: 'Pendiente', icon: 'document-text-outline', current: false, complete: false },
+    { name: 'Solicitud creada', status: 'Demostración', icon: 'checkmark-circle-outline', current: false, complete: true },
+    { name: 'Documentación', status: 'Completado · ejemplo', icon: 'checkmark-circle-outline', current: false, complete: true },
+    { name: 'Entrevista inicial', status: 'Completado · ejemplo', icon: 'checkmark-circle-outline', current: false, complete: true },
+    { name: 'Evaluación psicológica', status: 'En curso · ejemplo', icon: 'person-outline', current: true, complete: false },
+    { name: 'Estudio social', status: 'Pendiente · ejemplo', icon: 'document-text-outline', current: false, complete: false },
+    { name: 'Decisión final', status: 'Pendiente · ejemplo', icon: 'document-text-outline', current: false, complete: false },
+  ];
+
+  readonly requiredDocuments = [
+    { name: 'Cédula de identidad', description: 'Documento obligatorio', demoProvided: true, fileName: '' },
+    { name: 'Certificado de antecedentes penales', description: 'Documento obligatorio', demoProvided: false, fileName: '' },
+    { name: 'Informe médico', description: 'Documento obligatorio', demoProvided: false, fileName: '' },
+    { name: 'Comprobante de ingresos', description: 'Documento obligatorio', demoProvided: true, fileName: '' },
+    { name: 'Formulario de solicitud', description: 'Documento obligatorio', demoProvided: true, fileName: '' },
+  ];
+
+  readonly demoAppointments = [
+    { title: 'Evaluación psicológica', date: '15 de noviembre de 2025', time: '10:00 a. m.', location: 'Sede CONANI', status: 'Próxima · demostración' },
+    { title: 'Evaluación final', date: '20 de diciembre de 2025', time: '09:30 a. m.', location: 'Ubicación de ejemplo', status: 'Próxima · demostración' },
   ];
 
   readonly notifications: DashboardNotification[] = [
@@ -65,7 +86,7 @@ export class DashboardPage {
       title: 'Documento pendiente',
       description: 'Informe médico. Por favor, sube tu documento.',
       date: 'Hace 5 h',
-      unread: false,
+      unread: true,
     },
     {
       category: 'Sistema',
@@ -99,11 +120,12 @@ export class DashboardPage {
   constructor(
     private readonly router: Router,
     private readonly supabase: SupabaseService,
+    private readonly alertController: AlertController,
   ) {
     addIcons({
       calendarOutline, checkmarkCircleOutline, chatbubbleEllipsesOutline, documentTextOutline,
       folderOpenOutline, gridOutline, helpCircleOutline, homeOutline, informationCircleOutline,
-      logOutOutline, notificationsOutline, personOutline, settingsOutline,
+      lockClosedOutline, logOutOutline, notificationsOutline, personOutline, settingsOutline,
     });
     void this.loadProfile();
     this.supabase.client.auth.onAuthStateChange((_event, session) => {
@@ -156,17 +178,58 @@ export class DashboardPage {
     return this.notifications.filter((notification) => notification.unread).length;
   }
 
+  get primarySection(): 'inicio' | 'proceso' | 'notificaciones' | 'perfil' {
+    if (this.activeSection === 'documentos' || this.activeSection === 'citas') return 'proceso';
+    if (this.activeSection === 'datos') return 'perfil';
+    if (this.activeSection === 'notificaciones') return 'notificaciones';
+    return this.activeSection === 'proceso' ? 'proceso' : this.activeSection === 'perfil' ? 'perfil' : 'inicio';
+  }
+
+  get selectedDocuments(): typeof this.requiredDocuments {
+    return this.requiredDocuments.filter((document) => document.fileName || document.demoProvided);
+  }
+
   showSection(section: DashboardSection): void {
     this.activeSection = section;
     this.assistantOpen = false;
   }
 
   openQuickLink(destination: 'documentos' | 'citas' | 'notificaciones' | 'mas'): void {
-    if (destination === 'documentos' || destination === 'citas') {
-      this.showSection('proceso');
-      return;
-    }
-    this.showSection(destination === 'notificaciones' ? 'notificaciones' : 'perfil');
+    this.showSection(destination);
+  }
+
+  selectLocalFile(event: Event, document: (typeof this.requiredDocuments)[number]): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    document.fileName = file.name;
+    this.documentTab = 'subidos';
+    this.localNotice = `Archivo seleccionado en este dispositivo: ${file.name}. No se envió ni guardó en PathHome.`;
+  }
+
+  downloadCalendar(appointment: (typeof this.demoAppointments)[number]): void {
+    const start = appointment.date.includes('15 de noviembre') ? '20251115T100000' : '20251220T093000';
+    const end = appointment.date.includes('15 de noviembre') ? '20251115T110000' : '20251220T103000';
+    const content = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//PathHome//Citas de demostracion//ES',
+      'BEGIN:VEVENT', `DTSTART:${start}`, `DTEND:${end}`, `SUMMARY:${appointment.title} (demostración)`,
+      `LOCATION:${appointment.location}`, 'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n');
+    const url = URL.createObjectURL(new Blob([content], { type: 'text/calendar;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'cita-pathhome-demostracion.ics';
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    this.localNotice = 'Se descargó un archivo de calendario de demostración. No se creó ni notificó una cita real.';
+  }
+
+  profileAction(action: 'editar' | 'hogar' | 'ayuda'): void {
+    const messages = {
+      editar: 'La edición del perfil estará disponible cuando se conecte el servicio. No se guardaron cambios.',
+      hogar: 'Los datos del hogar se mostrarán aquí cuando estén disponibles en tu cuenta.',
+      ayuda: 'La ayuda y el soporte estarán disponibles cuando se conecte el servicio.',
+    };
+    this.localNotice = messages[action];
   }
 
   toggleAssistant(): void {
@@ -176,5 +239,20 @@ export class DashboardPage {
   async signOut(): Promise<void> {
     await this.supabase.client.auth.signOut();
     await this.router.navigateByUrl('/login');
+  }
+
+  async confirmSignOut(): Promise<void> {
+    const alert = await this.alertController.create({
+      header: 'Cerrar sesión',
+      message: '¿Estás seguro de que deseas cerrar sesión?',
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        { text: 'Cerrar sesión', role: 'confirm' },
+      ],
+    });
+
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    if (role === 'confirm') await this.signOut();
   }
 }
