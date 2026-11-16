@@ -1,0 +1,28 @@
+:host{--admin-ink:#4e557c;--admin-muted:#8e93ac;--admin-line:#eae8f1;--admin-purple:#7558dc;--admin-bg:#f7f8fc}
+.admin-content{--background:var(--admin-bg);font-family:Nunito,"Segoe UI",sans-serif}
+.admin-shell{grid-template-columns:252px minmax(0,1fr);background:var(--admin-bg)}
+.sidebar{z-index:3;padding:28px 17px 22px;border-right:1px solid #eeedf4;background:#fff}
+.brand{display:flex;align-items:center;gap:11px;margin:0 8px 34px;color:var(--admin-ink);font-size:25px;letter-spacing:-.05em}
+.brand-logo{display:block;flex:none;width:43px;height:43px;object-fit:contain;border-radius:12px}
+.sidebar nav{gap:7px}
+.sidebar nav button{min-height:48px;padding:0 13px;border-radius:14px;color:#81869e;font-size:13px;transition:background .15s ease,color .15s ease}
+.sidebar nav button:hover{background:#f6f3ff;color:var(--admin-purple)}
+.sidebar nav button.active{background:#efeaff;color:var(--admin-purple)}
+.nav-icon{width:23px;font-size:20px}
+.logout{gap:11px;min-height:46px;margin-top:auto;padding:0 13px;border:1px solid #f0edf5;border-radius:14px;color:#7d829a;font-size:13px}
+.logout ion-icon{font-size:19px;color:#969ab0}
+.main-area{position:relative;isolation:isolate;width:min(100%,1320px);padding:32px clamp(24px,4vw,58px) 72px;background:transparent}
+.main-area:before,.main-area:after{position:absolute;z-index:-1;right:0;width:220px;height:190px;background-position:center;background-repeat:no-repeat;background-size:contain;mix-blend-mode:multiply;opacity:.42;pointer-events:none;content:""}
+.main-area:before{top:12px;background-image:url('/assets/img/img8.jpg')}
+.main-area:after{bottom:8px;width:290px;height:190px;background-image:url('/assets/img/img7.jpg')}
+.page-heading{gap:15px;margin-bottom:24px;padding:0}
+.page-heading h1{color:var(--admin-ink);font-size:clamp(25px,2.4vw,32px);letter-spacing:-.035em}
+.page-heading p{color:var(--admin-muted);font-size:13px}
+.page-eyebrow{margin:0 0 5px;color:#9188b2;font-size:10px;font-weight:850;letter-spacing:.13em}
+.heading-icon{width:52px;height:52px;border:1px solid #e9e3fa;border-radius:17px;background:#f0ebff;color:var(--admin-purple);font-size:23px}
+.heading-icon ion-icon{font-size:23px}
+.heading-icon.users-icon{background:#eaf3ff;color:#6288ce}
+.refresh{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:39px;padding:0 14px;border-color:#e8e4f1;color:#6e59c7;font-size:12px}
+.refresh ion-icon{font-size:16px}
+@media(max-width:1050px){.admin-shell{grid-template-columns:220px minmax(0,1fr)}.main-area{padding:28px 24px 58px}}
+@media(max-width:760px){.admin-shell{background:var(--admin-bg)}.sidebar{height:calc(70px + env(safe-area-inset-bottom));padding:5px 4px max(5px,env(safe-area-inset-bottom))}.sidebar nav{grid-template-columns:repeat(6,minmax(0,1fr));gap:3px}.sidebar nav button{font-size:9px}.nav-icon{font-size:19px}.main-area{padding:20px 15px calc(96px + env(safe-area-inset-bottom))}.main-area:before,.main-area:after{width:150px;height:130px;opacity:.3}.brand,.logout{display:none}.page-heading{align-items:center;margin-bottom:18px}.heading-icon{width:45px;height:45px;border-radius:15px}.page-heading h1{font-size:23px}.page-heading p{font-size:12px}}

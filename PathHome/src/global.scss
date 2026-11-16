@@ -45,12 +45,15 @@ ion-content.dashboard-content {
   .dashboard-shell { box-sizing:border-box; width:min(100%,1180px); min-height:100%; margin:auto; padding:16px 18px calc(96px + env(safe-area-inset-bottom)); overflow-x:hidden; }
   .demo-note { display:none; }
   .view { display:grid; align-content:start; gap:14px; min-width:0; }
+  .home-loading { min-height:50vh; align-content:center; justify-items:center; gap:12px; color:var(--muted); font-size:13px; }
+  .dashboard-loader { width:30px; height:30px; border:3px solid #e9e6f4; border-top-color:#6847e8; border-radius:50%; animation:dashboard-loading-spin .8s linear infinite; }
+  @keyframes dashboard-loading-spin { to { transform:rotate(360deg); } }
   h1,h2,p { margin:0; }
   button { color:inherit; font:inherit; }
   .card { box-sizing:border-box; border:1px solid var(--line); border-radius:20px; background:#fff; color:var(--ink); box-shadow:0 4px 14px #4d54830b; }
   .home-view { grid-template-columns:minmax(0,1fr); grid-template-areas:'top' 'welcome' 'stage' 'quick' 'next'; gap:10px; }
   .home-topbar { grid-area:top; display:flex; align-items:center; justify-content:space-between; min-height:40px; }
-  .menu-mark,.topbar-bell { position:relative; display:grid; width:38px; height:38px; place-items:center; border-radius:50%; background:#fff; color:var(--ink); }
+  .menu-mark,.topbar-bell { position:relative; display:grid; width:38px; height:38px; place-items:center; border:0; border-radius:50%; background:#fff; color:var(--ink); }
   .menu-mark svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-width:2; }
   .topbar-bell ion-icon { font-size:21px; }
   .topbar-bell b { position:absolute; top:-2px; right:-2px; display:grid; width:18px; height:18px; place-items:center; border-radius:50%; background:#f47d79; color:#fff; font-size:11px; }
@@ -78,7 +81,7 @@ ion-content.dashboard-content {
   .quick-icon.folder { background:#f1eaff; color:#7048ed; } .quick-icon.calendar { background:#ffeaf1; color:#f04e78; } .quick-icon.bell { background:#fff0dc; color:#df8524; } .quick-icon.more { background:#eaf8ed; color:#26a96f; }
   .quick-card strong { font-size:11px; line-height:1.15; font-weight:800; }
   .unread-badge,.nav-badge { position:absolute; top:8px; right:8px; display:grid; width:19px; height:19px; place-items:center; border-radius:50%; background:#f47d79; color:#fff; font-size:11px; }
-  .next-appointment { grid-area:next; display:grid; grid-template-columns:42px minmax(0,1fr) 12px; align-items:center; gap:10px; width:100%; padding:12px; text-align:left; }
+  .next-appointment { grid-area:next; display:grid; grid-template-columns:minmax(0,1fr) 12px; align-items:center; gap:10px; width:100%; padding:12px; text-align:left; }
   .appointment-icon { display:grid; width:42px; height:42px; place-items:center; border-radius:50%; background:#e7efff; color:#507fe9; font-size:21px; }
   .next-appointment-copy { display:grid; gap:3px; min-width:0; }
   .next-appointment-copy strong { font-size:13px; line-height:1.25; }
@@ -106,6 +109,13 @@ ion-content.dashboard-content {
   .segmented-tabs button:active { filter:brightness(.9); }
   .document-list,.appointment-list,.notification-list { display:grid; gap:9px; min-width:0; }
   .document-row { display:grid; grid-template-columns:38px minmax(0,1fr) auto; align-items:center; gap:9px; min-height:64px; padding:9px; border:0; border-radius:15px; }
+  .uploaded-document-row { grid-template-columns:38px minmax(0,1fr) 132px; gap:10px; }
+  .uploaded-document-row .document-copy { overflow:hidden; }
+  .uploaded-document-row .document-copy strong { overflow-wrap:anywhere; }
+  .uploaded-document-row .document-metadata { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .document-actions { display:flex; align-items:center; justify-content:flex-end; gap:7px; min-width:0; }
+  .document-actions .upload-button { display:inline-flex; flex:none; align-items:center; justify-content:center; min-width:66px; min-height:32px; padding:0 10px; text-align:center; }
+  .document-actions .text-action { min-height:32px; padding:0 10px; border-radius:16px; background:#f2edff; color:#684fec; font-size:11px; white-space:nowrap; }
   .document-mark { display:grid; width:36px; height:36px; place-items:center; border-radius:50%; background:#e3f7ec; color:#31bd80; font-size:20px; }
   .document-mark.medical-document { background:#ffe7f0; color:#ef4f82; }
   .document-copy { display:grid; gap:2px; min-width:0; } .document-copy strong { color:var(--ink); font-size:12px; line-height:1.25; } .document-copy>span,.document-copy small { color:var(--muted); font-size:10px; line-height:1.25; }
@@ -127,9 +137,14 @@ ion-content.dashboard-content {
   .filter-list button { flex:none; padding:8px 12px; border:0; border-radius:20px; background:#f0eafa; color:var(--ink); font-size:11px; font-weight:700; }
   .filter-list .filter-selected { background:#6847e8; color:#fff; box-shadow:0 2px 6px #6847e833; }
   .notification-list { gap:8px; }
-  .notification-row { display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:9px; padding:11px; border:1px solid var(--line); border-radius:15px; background:#fff; box-shadow:0 3px 10px #4d54830a; }
+  .notification-row { display:grid; grid-template-columns:40px minmax(0,1fr) auto; align-items:center; gap:9px; width:100%; padding:11px; border:1px solid var(--line); border-radius:15px; background:#fff; color:var(--ink); font:inherit; text-align:left; box-shadow:0 3px 10px #4d54830a; cursor:pointer; }
+  .notification-row:not(.notification-read) { border-color:#ddd4fb; }
+  .notification-row.notification-read { background:#fcfbff; }
+  .notification-row:focus-visible,.topbar-bell:focus-visible,.mark-all-read:focus-visible { outline:2px solid #8063ed; outline-offset:2px; }
+  .mark-all-read { justify-self:start; padding:0; border:0; background:transparent; color:#684fec; font-size:12px; font-weight:700; cursor:pointer; }
+  .notification-error { padding:11px 13px; border:1px solid #f2c5cc; border-radius:13px; background:#fff3f4; color:#a33c52; font-size:12px; line-height:1.4; }
   .notification-icon { width:38px; height:38px; background:#e4efff; color:#4587f2; font-size:20px; } .notification-icon.appointment { background:#ffe9f1; color:#f34d82; } .notification-icon.document { background:#fff0d6; color:#ffa624; }
-  .notification-copy { min-width:0; } .notification-copy h2 { font-size:12px; } .notification-copy p,.notification-row time { color:var(--muted); font-size:10px; line-height:1.35; }
+  .notification-copy { min-width:0; } .notification-copy h2 { font-size:12px; } .notification-copy p { color:var(--muted); font-size:10px; line-height:1.35; overflow-wrap:anywhere; } .notification-row time { color:var(--muted); font-size:10px; line-height:1.35; }
   .notification-row time { align-self:start; white-space:nowrap; } .unread-dot { display:inline-block; width:7px; height:7px; margin-left:4px; border-radius:50%; background:#f47d79; vertical-align:middle; }
   .empty-state { padding:20px; color:var(--muted); }
   .profile-heading { display:grid; grid-template-columns:32px 1fr 32px; } .profile-heading h1 { justify-self:center; } .profile-settings { display:grid; width:32px; height:32px; place-items:center; border-radius:50%; background:#f0eafa; color:#6b62a8; font-size:18px; }
@@ -174,6 +189,14 @@ ion-content.dashboard-content {
   .assistant-copy>span { color:var(--muted); font-size:12px; line-height:1.35; }
   .assistant-reply { grid-column:1/-1; padding:10px 12px; border-radius:12px; background:#fff; color:var(--muted); font-size:12px; line-height:1.4; }
 }
+
+@container dashboard (max-width:599px) {
+  ion-content.dashboard-content {
+    .uploaded-document-row { grid-template-columns:36px minmax(0,1fr); align-items:start; }
+    .uploaded-document-row .document-actions { grid-column:2; justify-content:flex-start; }
+    .uploaded-document-row .document-metadata { white-space:normal; overflow-wrap:anywhere; }
+  }
+}
 @container dashboard (min-width:600px) {
   ion-content.dashboard-content {
     .dashboard-shell { padding:24px 28px calc(108px + env(safe-area-inset-bottom)); }
@@ -200,8 +223,8 @@ ion-content.dashboard-content {
     .dashboard-shell { width:min(100%,1360px); padding:28px 42px 118px; }
     .home-view { grid-template-columns:minmax(300px,.9fr) minmax(0,1.1fr); gap:18px 22px; }
     .welcome-header { min-height:118px; } .welcome-copy h1 { font-size:28px; }
-    .current-stage { grid-row:3/5; grid-template-columns:112px minmax(0,1fr); min-height:230px; align-content:center; gap:16px; padding:28px; }
-    .progress-ring { width:112px; } .progress-ring:before { inset:9px; } .progress-ring span { font-size:23px; }
+    .current-stage { grid-template-columns:92px minmax(0,1fr); min-height:150px; align-content:center; gap:14px; padding:20px; }
+    .progress-ring { width:92px; } .progress-ring:before { inset:9px; } .progress-ring span { font-size:21px; }
     .current-stage-copy strong { font-size:20px; } .current-stage-copy>span:not(.stage-link) { font-size:16px; }
     .quick-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
     .quick-card { min-height:104px; } .quick-card strong { font-size:13px; }
@@ -339,9 +362,18 @@ ion-content.dashboard-content {
   .profile-avatar-wrap { position:relative; width:66px; height:66px; }
   .profile-avatar-placeholder { display:grid; width:66px; height:66px; place-items:center; border:2px solid #dce9ff; border-radius:50%; background:#e9f2ff; color:#5792f3; }
   .profile-avatar-placeholder ion-icon { font-size:38px; }
+  .profile-avatar-image { display:block; width:66px; height:66px; border:2px solid #dce9ff; border-radius:50%; object-fit:cover; }
+  .profile-photo-input { display:none; }
   .profile-photo-option { position:absolute; right:-3px; bottom:-2px; display:grid; width:27px; height:27px; place-items:center; padding:0; border:2px solid #fff; border-radius:50%; background:#6a8ff0; color:#fff; box-shadow:0 2px 6px #4c5b8b30; }
   .profile-photo-option svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
   .profile-photo-option:disabled { opacity:1; cursor:default; }
+  .profile-edit-form { align-items:stretch; padding:18px; }
+  .profile-edit-form label { gap:7px; font-size:13px; }
+  .profile-edit-form input { min-height:48px; padding:0 13px; color:var(--ink); font-size:14px; }
+  .profile-edit-form p { margin:0; }
+  .profile-edit-form .profile-feedback { color:#5d6291; }
+  .profile-save-button { width:100%; min-height:46px; border:0; border-radius:14px; background:linear-gradient(100deg,#7657e9,#8a6dec); color:#fff; font:inherit; font-size:14px; font-weight:800; cursor:pointer; }
+  .profile-save-button:disabled { opacity:.65; cursor:wait; }
   .profile-summary-copy { display:grid; justify-items:center; gap:3px; }
   .profile-summary-copy .demo-caption { display:block; margin-bottom:2px; color:var(--muted); font-size:13px; }
   .profile-summary h2 { font-size:19px; }

@@ -1,7 +1,7 @@
 <ion-content [fullscreen]="true" class="dashboard-content">
   <div class="dashboard-frame">
   <main class="dashboard-shell">
-    <p class="demo-note">Vista con datos demostrativos · no conectada a registros reales</p>
+    <p class="demo-note">Tus documentos se guardan de forma privada y solo los revisan el administrador y los psicólogos autorizados.</p>
 
     @if (localNotice) {
       <div class="local-notice" role="status">
@@ -10,16 +10,21 @@
       </div>
     }
 
-    @if (activeSection === 'inicio') {
+    @if (activeSection === 'inicio' && dashboardLoading) {
+      <section class="view home-loading" role="status" aria-live="polite" aria-label="Cargando tu información">
+        <span class="dashboard-loader" aria-hidden="true"></span>
+        <p>Cargando tu información…</p>
+      </section>
+    } @else if (activeSection === 'inicio') {
       <section class="view home-view" aria-labelledby="home-title">
         <div class="home-topbar" aria-label="Accesos de la pantalla de inicio">
           <span class="menu-mark" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
           </span>
-          <span class="topbar-bell" aria-label="Notificaciones">
+          <button class="topbar-bell" type="button" aria-label="Abrir notificaciones" (click)="showSection('notificaciones')">
             <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
             @if (unreadCount) { <b>{{ unreadCount }}</b> }
-          </span>
+          </button>
         </div>
 
         <header class="welcome-header">
@@ -32,10 +37,10 @@
         </header>
 
         <button class="card current-stage" type="button" (click)="showSection('proceso')">
-          <span class="progress-ring" role="img" aria-label="Progreso demostrativo del 60 por ciento"><span>60%</span></span>
+          <span class="progress-ring" role="img" [attr.aria-label]="'Documentación enviada: ' + documentProgress + ' por ciento'" [style.background]="'conic-gradient(#5fc7a4 0 ' + documentProgress + '%, #e8edf5 ' + documentProgress + '% 100%)'"><span>{{ documentProgress }}%</span></span>
           <span class="current-stage-copy">
-            <strong>Tu proceso de adopción</strong>
-            <span>En evaluación psicológica</span>
+            <strong>Documentación de tu proceso</strong>
+            <span>{{ processStatus }}</span>
             <span class="stage-link">Ver detalles <span aria-hidden="true">›</span></span>
           </span>
         </button>
@@ -60,14 +65,12 @@
           </button>
         </div>
 
-        <button class="card next-appointment" type="button" (click)="openQuickLink('citas')">
-          <span class="appointment-icon" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
-          <span class="next-appointment-copy">
-            <strong>Próxima cita · demostración</strong>
-            <span>15 de noviembre · 10:00 a. m.</span>
-          </span>
-          <span class="chevron" aria-hidden="true">›</span>
-        </button>
+        @if (familyAppointments.length) {
+          <button class="card next-appointment" type="button" (click)="openQuickLink('citas')">
+            <span class="next-appointment-copy"><strong>Próxima cita</strong><span>{{ appointmentDate(familyAppointments[0].appointment_date) }} · {{ familyAppointments[0].appointment_time }}</span></span>
+            <span class="chevron" aria-hidden="true">›</span>
+          </button>
+        }
 
         <button class="card assistant-card" type="button" [attr.aria-expanded]="assistantOpen" (click)="toggleAssistant()">
           <span class="assistant-avatar" aria-hidden="true"><ion-icon name="chatbubble-ellipses-outline"></ion-icon></span>
@@ -92,7 +95,7 @@
           <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
           <h1 id="process-title">Mi proceso</h1>
         </header>
-        <p class="section-note">Etapas y estados de ejemplo · no representan una evaluación real</p>
+        <p class="section-note">El avance se actualiza con tus documentos, la revisión del administrador y las citas agendadas.</p>
         <div class="stage-list">
           @for (stage of stages; track stage.name) {
             <article class="stage-row" [class.stage-current]="stage.current" [class.stage-complete]="stage.complete">
@@ -114,7 +117,7 @@
           <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
           <h1 id="documents-title">Mis documentos</h1>
         </header>
-        <p class="section-note">Contenido demostrativo. Los archivos seleccionados permanecen en este dispositivo y no se envían.</p>
+        <p class="section-note">Sube tus documentos para que el equipo pueda revisar tu expediente.</p>
         <div class="segmented-tabs" role="tablist" aria-label="Secciones de documentos">
           <button type="button" role="tab" [attr.aria-selected]="documentTab === 'requeridos'" [class.tab-selected]="documentTab === 'requeridos'" (click)="documentTab = 'requeridos'">Requeridos</button>
           <button type="button" role="tab" [attr.aria-selected]="documentTab === 'subidos'" [class.tab-selected]="documentTab === 'subidos'" (click)="documentTab = 'subidos'">Subidos</button>
@@ -125,16 +128,11 @@
             @for (document of requiredDocuments; track document.name) {
               <article class="card document-row">
                 <span class="document-mark" [class.medical-document]="document.name === 'Informe médico'" aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span>
-                <span class="document-copy">
-                  <strong>{{ document.name }}</strong>
-                  <span>{{ document.description }}</span>
-                  @if (document.fileName) { <small>Seleccionado: {{ document.fileName }}</small> }
-                  @else if (document.demoProvided) { <small>Incluido en los datos de demostración</small> }
-                </span>
-                @if (document.demoProvided && !document.fileName) {
-                  <span class="document-state state-complete" aria-label="Documento de ejemplo"><ion-icon name="checkmark-circle-outline"></ion-icon></span>
+                <span class="document-copy"><strong>{{ document.name }}</strong><span>{{ document.description }}</span></span>
+                @if (isDocumentUploaded(document.name)) {
+                  <span class="document-state state-complete"><ion-icon name="checkmark-circle-outline"></ion-icon><span>Enviado</span></span>
                 } @else {
-                  <span class="upload-button">{{ document.fileName ? 'Cambiar' : 'Subir' }}</span>
+                  <label class="upload-button" [attr.aria-disabled]="documentBusy">{{ documentBusy ? 'Enviando…' : 'Subir' }}<input type="file" accept="application/pdf,image/*" [disabled]="documentBusy" (change)="uploadRequiredFile($event, document.name)" /></label>
                 }
               </article>
             }
@@ -144,27 +142,21 @@
             <span>Tus documentos están seguros y solo son accesibles por personal autorizado.</span>
           </aside>
         } @else {
-          @if (selectedDocuments.length) {
+          @if (uploadedDocuments.length) {
             <div class="document-list">
-              @for (document of selectedDocuments; track document.name) {
-                <article class="card document-row">
-                <span class="document-mark" [class.medical-document]="document.name === 'Informe médico'" aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span>
-                  <span class="document-copy">
-                    <strong>{{ document.name }}</strong>
-                    <span>{{ document.fileName || 'Incluido en los datos de demostración' }}</span>
+              @for (document of uploadedDocuments; track document.id) {
+                <article class="card document-row uploaded-document-row">
+                  <span class="document-mark" aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span>
+                  <span class="document-copy"><strong>{{ document.document_type }}</strong><span class="document-metadata">{{ document.name }} · {{ formatDocumentDate(document.created_at) }}</span></span>
+                  <span class="document-actions">
+                    <label class="upload-button" [attr.aria-disabled]="documentBusy">Cambiar<input type="file" accept="application/pdf,image/*" [disabled]="documentBusy" (change)="uploadRequiredFile($event, document.document_type)" /></label>
+                    <button class="text-action" type="button" [disabled]="documentBusy" (click)="deleteFamilyDocument(document.id)">Eliminar</button>
                   </span>
-                  <span class="document-state state-complete"><ion-icon name="checkmark-circle-outline"></ion-icon><span>{{ document.fileName ? 'Local' : 'Demo' }}</span></span>
                 </article>
               }
             </div>
-            <p class="demo-caption">Los elementos marcados como demo son ejemplos de la interfaz, no documentos enviados.</p>
           } @else {
-            <div class="card empty-panel">
-              <span class="document-mark"><ion-icon name="folder-open-outline"></ion-icon></span>
-              <strong>Aún no has seleccionado archivos</strong>
-              <p>Los archivos elegidos desde “Requeridos” aparecerán aquí mientras esta vista permanezca abierta.</p>
-              <button class="text-action" type="button" (click)="documentTab = 'requeridos'">Ver documentos requeridos ›</button>
-            </div>
+            <div class="card empty-panel"><span class="document-mark"><ion-icon name="folder-open-outline"></ion-icon></span><strong>Aún no has enviado documentos</strong><p>Los documentos que envíes aparecerán aquí.</p></div>
           }
         }
       </section>
@@ -176,7 +168,7 @@
           <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
           <h1 id="appointments-title">Mis citas</h1>
         </header>
-        <p class="section-note">Citas de demostración · no son reservas ni notificaciones reales</p>
+        <p class="section-note">Aquí verás las citas que agende el psicólogo para tu familia.</p>
         <div class="segmented-tabs" role="tablist" aria-label="Secciones de citas">
           <button type="button" role="tab" [attr.aria-selected]="appointmentTab === 'proximas'" [class.tab-selected]="appointmentTab === 'proximas'" (click)="appointmentTab = 'proximas'">Próximas</button>
           <button type="button" role="tab" [attr.aria-selected]="appointmentTab === 'historial'" [class.tab-selected]="appointmentTab === 'historial'" (click)="appointmentTab = 'historial'">Historial</button>
@@ -184,26 +176,22 @@
 
         @if (appointmentTab === 'proximas') {
           <div class="appointment-list">
-            @for (appointment of demoAppointments; track appointment.title; let i = $index) {
-              @if (i === 1) { <h2 class="appointments-subtitle">Otras citas</h2> }
-              <article class="card appointment-detail" [class.primary-appointment]="i === 0">
+            @for (appointment of familyAppointments; track appointment.id) {
+              <article class="card appointment-detail">
                 <span class="appointment-icon" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
                 <div class="appointment-detail-copy">
                   <h2>{{ appointment.title }}</h2>
-                  <p><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{ appointment.date }} · {{ appointment.time }}</p>
-                  <p><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></svg>{{ appointment.location }}</p>
+                  <p>{{ appointmentDate(appointment.appointment_date) }} · {{ appointment.appointment_time }}</p>
+                  @if (appointment.note) { <p>{{ appointment.note }}</p> }
                 </div>
-                @if (i === 0) {
-                  <span class="calendar-button"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon><span>Agregar al calendario</span></span>
-                }
               </article>
-            }
+            } @empty { <div class="card empty-panel"><strong>Aún no tienes citas agendadas</strong><p>Cuando el psicólogo agende una cita, aparecerá aquí.</p></div> }
           </div>
         } @else {
           <div class="card empty-panel">
-            <span class="appointment-icon"><ion-icon name="calendar-outline"></ion-icon></span>
-            <strong>No hay citas anteriores en esta demostración</strong>
-            <p>El historial real de citas estará disponible al conectar el servicio.</p>
+
+            <strong>No hay citas anteriores</strong>
+            <p>Las citas completadas aparecerán aquí.</p>
           </div>
         }
       </section>
@@ -215,28 +203,32 @@
           <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
           <h1 id="notifications-title">Notificaciones</h1>
         </header>
-        <p class="section-note">Avisos demostrativos · no corresponden a eventos reales de tu cuenta</p>
+        <p class="section-note">Recibirás avisos cuando se actualicen tus documentos, tu expediente o tus citas.</p>
+        @if (unreadCount) {
+          <button class="mark-all-read" type="button" (click)="markAllNotificationsAsRead()">Marcar todas como leídas</button>
+        }
+        @if (notificationError) { <p class="notification-error" role="alert">{{ notificationError }}</p> }
         <div class="filter-list" role="group" aria-label="Filtrar notificaciones">
           @for (filter of filters; track filter) {
             <button type="button" [class.filter-selected]="activeFilter === filter" [attr.aria-pressed]="activeFilter === filter" (click)="activeFilter = filter">{{ filter }}</button>
           }
         </div>
-        @if (visibleNotifications.length) {
+        @if (notificationsLoading && !familyNotifications.length) {
+          <p class="empty-state" role="status">Cargando notificaciones…</p>
+        } @else if (visibleNotifications.length) {
           <div class="notification-list">
-            @for (notification of visibleNotifications; track notification.title + notification.date; let i = $index) {
-              @if (i < 4) {
-              <article class="notification-row">
+            @for (notification of visibleNotifications; track notification.id) {
+              <button class="notification-row" [class.notification-read]="!notification.unread" type="button" [attr.aria-label]="notification.unread ? 'Marcar como leída: ' + notification.title : notification.title" (click)="markNotificationAsRead(notification.id)">
                 <span class="notification-icon" [class.appointment]="notification.tone === 'appointment'" [class.document]="notification.tone === 'document'" aria-hidden="true"><ion-icon [name]="notification.icon"></ion-icon></span>
                 <div class="notification-copy">
                   <h2>{{ notification.title }} @if (notification.unread) { <span class="unread-dot" aria-label="Sin leer"></span> }</h2>
                   <p>{{ notification.description }}</p>
                 </div>
                 <time>{{ notification.date }}</time>
-              </article>
-              }
+              </button>
             }
           </div>
-        } @else {
+        } @else if (!notificationError) {
           <p class="empty-state">No hay notificaciones en esta categoría.</p>
         }
       </section>
@@ -251,8 +243,10 @@
         </header>
         <article class="card profile-summary">
           <div class="profile-avatar-wrap">
-            <div class="profile-avatar-placeholder" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></div>
-            <button class="profile-photo-option" type="button" disabled aria-label="Cambiar foto de perfil, opción visual no disponible">
+            @if (profilePhotoUrl) { <img class="profile-avatar-image" [src]="profilePhotoUrl" alt="Foto de perfil" /> }
+            @else { <div class="profile-avatar-placeholder" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></div> }
+            <input #profilePhotoInput class="profile-photo-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Seleccionar foto de perfil" (change)="changeProfilePhoto($event)" />
+            <button class="profile-photo-option" type="button" [disabled]="profilePhotoSaving" aria-label="Cambiar foto de perfil" (click)="profilePhotoInput.click()">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h3l1.4-2h7.2l1.4 2h3A1.5 1.5 0 0 1 21.5 9v9a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Z"/><circle cx="12" cy="13" r="3.5"/></svg>
             </button>
           </div>
@@ -263,6 +257,7 @@
             <p>{{ profileEmail }}</p>
           </div>
         </article>
+        @if (profileFeedback) { <p class="profile-feedback" role="status">{{ profileFeedback }}</p> }
         <div class="profile-options">
           <button class="profile-option" type="button" (click)="showSection('datos')"><span aria-hidden="true"><ion-icon name="person-outline"></ion-icon></span><span class="option-label">Editar perfil</span><span class="chevron">›</span></button>
           <button class="profile-option" type="button" (click)="showSection('documentos')"><span aria-hidden="true"><ion-icon name="document-text-outline"></ion-icon></span><span class="option-label">Mis documentos</span><span class="chevron">›</span></button>
@@ -391,7 +386,13 @@
     @if (activeSection === 'datos') {
       <section class="view detail-view" aria-labelledby="personal-data-title">
         <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a perfil" (click)="showSection('perfil')">‹</button><h1 id="personal-data-title">Editar perfil</h1></header>
-        <article class="card demo-fields"><label><span>Nombre completo</span><input [value]="profileName" readonly /></label><label><span>Correo electrónico</span><input [value]="profileEmail" readonly /></label><p>La edición estará disponible cuando el servicio de perfil esté conectado.</p></article>
+        <form class="card demo-fields profile-edit-form" (ngSubmit)="saveProfileChanges()">
+          <label><span>Nombre completo</span><input name="profileName" type="text" autocomplete="name" maxlength="120" required [(ngModel)]="profileEditName" /></label>
+          <label><span>Correo electrónico</span><input name="profileEmail" type="email" autocomplete="email" required [(ngModel)]="profileEditEmail" /></label>
+          <p>Si cambias el correo, tendrás que confirmar la nueva dirección desde el mensaje que te enviemos.</p>
+          @if (profileFeedback) { <p class="profile-feedback" role="status">{{ profileFeedback }}</p> }
+          <button class="profile-save-button" type="submit" [disabled]="profileSaving">{{ profileSaving ? 'Guardando…' : 'Guardar cambios' }}</button>
+        </form>
       </section>
     }
   </main>

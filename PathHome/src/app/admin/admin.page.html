@@ -1,62 +1,62 @@
 <ion-content class="admin-content">
   <div class="admin-shell">
     <aside class="sidebar">
-      <a class="brand" href="/admin" aria-label="PathHome, panel administrador">PathHome</a>
+      <a class="brand" href="/admin" aria-label="PathHome, panel administrador"><img class="brand-logo" src="/assets/img/logo_splash.png" alt="">PathHome</a>
       <nav aria-label="Navegación administrativa">
         @for (item of navigation; track item.id) {
           <button type="button" [class.active]="activeSection === item.id" (click)="selectSection(item.id)">
-            <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+            <ion-icon class="nav-icon" [name]="item.icon" aria-hidden="true"></ion-icon>
             <span>{{ item.label }}</span>
           </button>
         }
       </nav>
-      <button class="logout" type="button" (click)="signOut()"><span aria-hidden="true">↪</span> Cerrar sesión</button>
+      <button class="logout" type="button" (click)="signOut()"><ion-icon name="log-out-outline" aria-hidden="true"></ion-icon><span>Cerrar sesión</span></button>
     </aside>
 
     <main class="main-area">
       @if (activeSection === 'solicitudes') {
         <header class="page-heading">
-          <div class="heading-icon">🔑</div>
-          <div><h1>Panel del administrador</h1><p>Solicitudes de acceso por rol</p></div>
+          <div class="heading-icon"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon></div>
+          <div><p class="page-eyebrow">PATHHOME · ADMINISTRACIÓN</p><h1>Panel del administrador</h1><p>Solicitudes de acceso por rol</p></div>
         </header>
 
         <section class="stats" aria-label="Resumen de solicitudes">
-          <div class="stat pending"><strong>{{ pendingCount }}</strong><span>Pendientes</span></div>
-          <div class="stat approved"><strong>{{ approvedCount }}</strong><span>Aprobadas</span></div>
-          <div class="stat rejected"><strong>{{ rejectedCount }}</strong><span>Rechazadas</span></div>
+          <div class="stat pending"><span class="stat-icon"><ion-icon name="time-outline"></ion-icon></span><strong>{{ pendingCount }}</strong><span>Pendientes</span></div>
+          <div class="stat approved"><span class="stat-icon"><ion-icon name="checkmark-circle-outline"></ion-icon></span><strong>{{ approvedCount }}</strong><span>Aprobadas</span></div>
+          <div class="stat rejected"><span class="stat-icon"><ion-icon name="close-circle-outline"></ion-icon></span><strong>{{ rejectedCount }}</strong><span>Rechazadas</span></div>
         </section>
 
         <section class="quick-links" aria-label="Secciones administrativas">
-          <button type="button" class="quick create" (click)="selectSection('usuarios')"><span>＋</span>Usuarios y permisos</button>
-          <button type="button" class="quick cases" (click)="selectSection('expedientes')"><span>📋</span>Expedientes y etapas</button>
-          <button type="button" class="quick appointments" (click)="selectSection('citas')"><span>▦</span>Citas</button>
-          <button type="button" class="quick children" (click)="selectSection('expedientes')"><span>🧒</span>Información del niño</button>
-          <button type="button" class="quick notices" (click)="selectSection('reportes')"><span>📨</span>Notificaciones enviadas</button>
-          <button type="button" class="quick reports" (click)="selectSection('reportes')"><span>📝</span>Evaluaciones</button>
+          <button type="button" class="quick create" (click)="selectSection('usuarios')"><span><ion-icon name="people-outline"></ion-icon></span>Usuarios y permisos</button>
+          <button type="button" class="quick cases" (click)="selectSection('expedientes')"><span><ion-icon name="folder-open-outline"></ion-icon></span>Expedientes</button>
+          <button type="button" class="quick appointments" (click)="selectSection('citas')"><span><ion-icon name="calendar-outline"></ion-icon></span>Citas</button>
+          <button type="button" class="quick children" (click)="selectSection('expedientes')"><span><ion-icon name="person-outline"></ion-icon></span>Información familiar</button>
+          <button type="button" class="quick notices" (click)="selectSection('reportes')"><span><ion-icon name="document-text-outline"></ion-icon></span>Actividad</button>
+          <button type="button" class="quick reports" (click)="selectSection('reportes')"><span><ion-icon name="bar-chart-outline"></ion-icon></span>Reportes</button>
         </section>
 
         @if (notice) { <p class="notice" role="status">{{ notice }}</p> }
         @if (error) { <p class="error" role="alert">{{ error }}</p> }
 
         <section class="request-section">
-          <div class="section-title-row"><h2>Solicitudes</h2><button type="button" class="refresh" [disabled]="loading" (click)="loadData()">Actualizar</button></div>
+          <div class="section-title-row"><div><p class="page-eyebrow">REVISIÓN DE ACCESO</p><h2>Solicitudes</h2></div><button type="button" class="refresh" [disabled]="loading" (click)="loadData()"><ion-icon name="refresh-outline"></ion-icon>{{ loading ? 'Actualizando…' : 'Actualizar' }}</button></div>
           @if (loading) {
-            <div class="empty-state">Cargando solicitudes…</div>
+            <div class="empty-state"><ion-icon name="time-outline"></ion-icon><strong>Cargando solicitudes…</strong></div>
           } @else if (requests.length === 0) {
-            <div class="empty-state"><strong>No hay solicitudes todavía</strong><span>Cuando un psicólogo o una institución envíe sus documentos, aparecerán aquí para revisión.</span></div>
+            <div class="empty-state"><span class="empty-card-icon"><ion-icon name="document-text-outline"></ion-icon></span><strong>No hay solicitudes todavía</strong><span>Cuando un psicólogo o una institución envíe sus documentos, aparecerán aquí para revisión.</span></div>
           } @else {
             <div class="request-list">
               @for (request of requests; track request.id) {
                 <article class="request-card">
-                  <div class="request-avatar">{{ request.account_type === 'profesional' ? '🧠' : '🏛️' }}</div>
+                  <div class="request-avatar"><ion-icon [name]="roleIcon(request.account_type)" aria-hidden="true"></ion-icon></div>
                   <div class="request-info">
                     <strong>{{ request.full_name || 'Cuenta sin nombre' }}</strong>
                     <span class="request-meta">{{ roleLabel(request.account_type) }} · {{ formatDate(request.created_at) }}</span>
                     <span class="request-email">{{ request.email }}</span>
                   </div>
-                  <span class="status" [class]="'status ' + request.status">{{ statusLabel(request.status) }}</span>
+                  <span class="status" [class]="'status ' + request.status"><ion-icon [name]="request.status === 'pendiente' ? 'time-outline' : request.status === 'aprobada' ? 'checkmark-circle-outline' : 'close-circle-outline'" aria-hidden="true"></ion-icon>{{ statusLabel(request.status) }}</span>
                   <div class="request-actions">
-                    <button class="document-button" type="button" [disabled]="documentLoadingId !== null" (click)="openDocument(request)">{{ documentLoadingId === request.id ? 'Preparando…' : 'Ver documento' }}</button>
+                      <button class="document-button" type="button" [disabled]="documentLoadingId !== null" (click)="openDocument(request)"><ion-icon name="document-text-outline"></ion-icon>{{ documentLoadingId === request.id ? 'Preparando…' : 'Ver documento' }}</button>
                     @if (request.status === 'pendiente') {
                       <button class="approve-button" type="button" (click)="askReview(request, 'aprobada')">Aprobar</button>
                       <button class="reject-button" type="button" (click)="askReview(request, 'rechazada')">Rechazar</button>
@@ -72,22 +72,22 @@
         </section>
       } @else if (activeSection === 'usuarios') {
         <header class="page-heading">
-          <div class="heading-icon users-icon">♧</div>
-          <div><h1>Usuarios y permisos</h1><p>{{ users.length }} cuentas registradas</p></div>
+          <div class="heading-icon users-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></div>
+          <div><p class="page-eyebrow">DIRECTORIO</p><h1>Usuarios y permisos</h1><p>{{ users.length }} cuentas registradas</p></div>
         </header>
         <section class="user-stats">
-          <div><strong>{{ familyCount }}</strong><span>Familias</span></div>
-          <div><strong>{{ professionalCount }}</strong><span>Psicólogos</span></div>
-          <div><strong>{{ institutionCount }}</strong><span>Instituciones</span></div>
+          <div><ion-icon name="people-outline"></ion-icon><strong>{{ familyCount }}</strong><span>Familias</span></div>
+          <div><ion-icon name="person-outline"></ion-icon><strong>{{ professionalCount }}</strong><span>Psicólogos</span></div>
+          <div><ion-icon name="business-outline"></ion-icon><strong>{{ institutionCount }}</strong><span>Instituciones</span></div>
         </section>
         @if (error) { <p class="error" role="alert">{{ error }}</p> }
-        @if (loading) { <div class="empty-state">Cargando usuarios…</div> }
-        @else if (users.length === 0) { <div class="empty-state">No hay cuentas para mostrar.</div> }
+        @if (loading) { <div class="empty-state"><ion-icon name="time-outline"></ion-icon><strong>Cargando usuarios…</strong></div> }
+        @else if (users.length === 0) { <div class="empty-state"><span class="empty-card-icon"><ion-icon name="people-outline"></ion-icon></span><strong>No hay cuentas para mostrar.</strong></div> }
         @else {
           <section class="user-list" aria-label="Usuarios registrados">
             @for (user of users; track user.id) {
               <article class="user-card">
-                <div class="request-avatar">{{ user.account_type === 'familia' ? '👨‍👩‍👧' : user.account_type === 'profesional' ? '🧠' : user.is_admin ? '🔑' : '🏛️' }}</div>
+                <div class="request-avatar"><ion-icon [name]="user.is_admin ? 'shield-checkmark-outline' : roleIcon(user.account_type)" aria-hidden="true"></ion-icon></div>
                 <div class="user-main"><strong>{{ user.full_name }}</strong><span>{{ user.email }}</span><small>{{ formatDate(user.created_at) }}</small></div>
                 <span class="role-chip">{{ user.is_admin ? 'Administrador' : roleLabel(user.account_type) }}</span>
                 @if (!user.is_admin && user.account_type !== 'familia') {
@@ -102,36 +102,51 @@
           </section>
         }
       } @else if (activeSection === 'perfil') {
-        <header class="page-heading"><div class="heading-icon">♙</div><div><h1>Perfil</h1><p>Sesión administrativa de PathHome</p></div></header>
-        <section class="placeholder"><span>🔑</span><h2>Administrador</h2><p>La cuenta está protegida por el rol de administrador registrado en Supabase.</p><button type="button" class="logout-button" (click)="signOut()">Cerrar sesión</button></section>
+        <header class="page-heading"><div class="heading-icon"><ion-icon name="person-circle-outline" aria-hidden="true"></ion-icon></div><div><p class="page-eyebrow">CUENTA</p><h1>Perfil</h1><p>Sesión administrativa de PathHome</p></div></header>
+        <section class="profile-panel"><span class="profile-mark"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon></span><div><p class="page-eyebrow">ACCESO SEGURO</p><h2>Administrador</h2><p>Esta cuenta tiene permisos administrativos para gestionar usuarios, solicitudes y expedientes.</p></div><button type="button" class="logout-button" (click)="signOut()"><ion-icon name="log-out-outline"></ion-icon>Cerrar sesión</button></section>
       } @else if (activeSection === 'expedientes') {
-        <header class="page-heading"><div class="heading-icon">▱</div><div><h1>Expedientes y etapas</h1><p>Seguimiento de los procesos familiares</p></div></header>
-        <p class="demo-label">Datos de demostración · no representan expedientes reales</p>
-        <section class="request-list" aria-label="Expedientes de demostración">
-          <article class="request-card"><div class="request-avatar" aria-hidden="true">▱</div><div class="request-info"><strong>Exp. 2025-0147 · Ana Rodríguez</strong><span>Evaluación psicológica</span></div><span class="status">En curso</span></article>
-          <article class="request-card"><div class="request-avatar" aria-hidden="true">▱</div><div class="request-info"><strong>Exp. 2025-0136 · Familia Santana</strong><span>Estudio social</span></div><span class="status aprobada">Registrada</span></article>
-          <article class="request-card"><div class="request-avatar" aria-hidden="true">▱</div><div class="request-info"><strong>Exp. 2025-0121 · Familia Núñez</strong><span>Seguimiento posterior</span></div><span class="status aprobada">Completado</span></article>
-        </section>
+        <header class="page-heading family-cases-heading"><span class="heading-icon cases-heading-icon"><ion-icon name="folder-open-outline"></ion-icon></span><div><p class="family-eyebrow">GESTIÓN FAMILIAR</p><h1>Expedientes</h1><p>Consulta los documentos que cada familia ha enviado.</p></div><button type="button" class="refresh" [disabled]="loading" (click)="loadData()"><ion-icon name="refresh-outline"></ion-icon>{{ loading ? 'Actualizando…' : 'Actualizar' }}</button></header>
+        @if (notice) { <p class="notice" role="status">{{ notice }}</p> }
+        @if (error) { <p class="error" role="alert">{{ error }}</p> }
+        @if (!selectedFamily) {
+          @if (loading) {
+            <div class="family-empty"><span class="family-loader"></span><strong>Cargando expedientes</strong><p>Buscando familias que enviaron documentos.</p></div>
+          } @else if (familyCases.length) {
+            <section class="family-case-grid" aria-label="Familias con documentos enviados">
+              @for (family of familyCases; track family.family_id) {
+                <button type="button" class="family-case-card" (click)="selectedFamily = family">
+                  <span class="family-card-top"><span class="family-card-label"><ion-icon name="people-outline"></ion-icon>EXPEDIENTE FAMILIAR</span><span class="family-status" [class]="'family-status ' + family.status">{{ statusLabel(family.status) }}</span></span>
+                  <strong class="family-card-name">{{ family.full_name }}</strong><span class="family-card-email">{{ family.email }}</span>
+                  <span class="family-card-footer"><span>{{ family.documents.length }} {{ family.documents.length === 1 ? 'documento enviado' : 'documentos enviados' }}</span><span class="family-card-link">Abrir expediente <b>›</b></span></span>
+                </button>
+              }
+            </section>
+          } @else {
+            <div class="family-empty"><strong>Aún no hay expedientes con documentos</strong><p>Cuando una familia envíe documentos, su expediente aparecerá aquí.</p></div>
+          }
+        } @else {
+          <button type="button" class="family-back-link" (click)="selectedFamily = null">‹ Volver a expedientes</button>
+          <section class="family-detail-panel">
+            <div class="family-detail-heading"><div><span class="family-card-label">EXPEDIENTE FAMILIAR</span><h2>{{ selectedFamily.full_name }}</h2><p>{{ selectedFamily.email }}</p></div><span class="family-status" [class]="'family-status ' + selectedFamily.status">{{ statusLabel(selectedFamily.status) }}</span></div>
+            <div class="family-documents-heading"><div><h3>Documentos enviados</h3><p>{{ selectedFamily.documents.length }} {{ selectedFamily.documents.length === 1 ? 'archivo' : 'archivos' }} en este expediente</p></div></div>
+            <div class="family-document-list">@for (doc of selectedFamily.documents; track doc.id) { <article class="family-document-row"><span class="family-document-icon"><ion-icon name="document-text-outline"></ion-icon></span><span class="family-document-copy"><strong>{{ doc.document_type }}</strong><small>{{ doc.name }} · {{ formatDate(doc.created_at) }}</small></span><button type="button" class="family-open-document" (click)="openFamilyDocument(doc.storage_path)"><ion-icon name="document-text-outline"></ion-icon>Abrir archivo</button></article> } @empty { <p>Esta familia aún no ha enviado documentos.</p> }</div>
+            <div class="request-actions">
+              @if (selectedFamily.status !== 'aprobada') { <button class="approve-button" type="button" (click)="reviewFamily(selectedFamily, 'aprobada')">Aprobar familia</button> }
+              @if (selectedFamily.status !== 'rechazada') { <button class="reject-button" type="button" (click)="reviewFamily(selectedFamily, 'rechazada')">Rechazar</button> }
+              @if (selectedFamily.status === 'aprobada') { <button class="cancel-button" type="button" (click)="removeFamilyApproval(selectedFamily)">Retirar aprobación</button> }
+            </div>
+          </section>
+        }
       } @else if (activeSection === 'citas') {
-        <header class="page-heading"><div class="heading-icon">▦</div><div><h1>Citas</h1><p>Agenda de PathHome</p></div></header>
-        <p class="demo-label">Vista de agenda · solo demostración</p>
-        <section class="user-stats demo-appointment-form" aria-label="Formulario visual de cita">
-          <label><span>Expediente</span><select disabled><option>Exp. 2025-0147 · Ana Rodríguez</option></select></label>
-          <label><span>Tipo</span><select disabled><option>Evaluación psicológica</option></select></label>
-          <label><span>Fecha</span><input type="date" disabled /></label>
-          <label><span>Hora</span><input type="time" disabled /></label>
-          <label class="wide-field"><span>Nota (opcional)</span><input disabled placeholder="Nota para la cita" /></label>
-          <button class="demo-submit" type="button" disabled>Programar y notificar</button>
-        </section>
-        <div class="section-title-row"><h2>Agenda</h2><span class="role-chip">Datos de demostración</span></div>
-        <article class="request-card"><div class="request-avatar" aria-hidden="true">▦</div><div class="request-info"><strong>Evaluación psicológica · Exp. 2025-0147</strong><span>10 de mayo de 2025 · 10:00 a. m.</span></div><span class="status aprobada">Programada</span></article>
+        <header class="page-heading"><span class="heading-icon appointments-heading-icon"><ion-icon name="calendar-outline"></ion-icon></span><div><p class="page-eyebrow">AGENDA</p><h1>Citas</h1><p>Las citas familiares se gestionan desde el expediente aprobado</p></div></header>
+        <div class="admin-empty-card"><span class="empty-card-icon"><ion-icon name="calendar-outline"></ion-icon></span><h2>Aún no hay citas para mostrar</h2><p>Las citas agendadas por el psicólogo se reflejarán aquí cuando estén disponibles.</p></div>
       } @else if (activeSection === 'reportes') {
-        <header class="page-heading"><div class="heading-icon">▥</div><div><h1>Reportes</h1><p>Resumen de la información disponible</p></div></header>
+        <header class="page-heading"><span class="heading-icon reports-heading-icon"><ion-icon name="bar-chart-outline"></ion-icon></span><div><p class="page-eyebrow">RESUMEN</p><h1>Reportes</h1><p>Resumen de la información disponible</p></div></header>
         <p class="demo-label">Estadísticas de demostración · sin datos reales</p>
         <section class="v7-report-grid" aria-label="Resumen del proceso">
-          <article><strong>2</strong><span>Solicitudes en proceso</span></article><article><strong>1</strong><span>Documentos pendientes</span></article>
-          <article><strong>1 / 2</strong><span>Evaluaciones realizadas / pendientes</span></article><article><strong>1</strong><span>Citas programadas</span></article>
-          <article><strong>1</strong><span>Familias evaluadas y aptas</span></article><article><strong>0</strong><span>Procesos completados</span></article>
+          <article><ion-icon name="time-outline"></ion-icon><strong>2</strong><span>Solicitudes en proceso</span></article><article><ion-icon name="document-text-outline"></ion-icon><strong>1</strong><span>Documentos pendientes</span></article>
+          <article><ion-icon name="checkmark-circle-outline"></ion-icon><strong>1 / 2</strong><span>Evaluaciones realizadas / pendientes</span></article><article><ion-icon name="calendar-outline"></ion-icon><strong>1</strong><span>Citas programadas</span></article>
+          <article><ion-icon name="people-outline"></ion-icon><strong>1</strong><span>Familias evaluadas y aptas</span></article><article><ion-icon name="folder-open-outline"></ion-icon><strong>0</strong><span>Procesos completados</span></article>
         </section>
         <section class="v7-stage-report"><h2>Solicitudes por etapa</h2><div><span>Documentación</span><i><b style="width:80%"></b></i><strong>2</strong></div><div><span>Entrevista inicial</span><i><b style="width:45%"></b></i><strong>1</strong></div><div><span>Evaluación psicológica</span><i><b style="width:45%"></b></i><strong>1</strong></div><div><span>Estudio social</span><i><b style="width:20%"></b></i><strong>0</strong></div></section>
       }

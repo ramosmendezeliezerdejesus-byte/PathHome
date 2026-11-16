@@ -1,12 +1,11 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { IonContent } from '@ionic/angular';
-import { SupabaseService } from '../core/supabase/supabase.service';
+import { FamilyCase, FamilyNotification, SupabaseService } from '../core/supabase/supabase.service';
 
 type PsychologistSection = 'inicio' | 'expedientes' | 'evaluaciones' | 'citas' | 'informes' | 'notificaciones' | 'perfil';
 type RecordStatus = 'Pendiente' | 'En progreso' | 'Completada';
-type AppointmentStatus = 'Pendiente' | 'Realizada' | 'Cancelada';
 
 interface ChildInfo {
   name: string; age: string; sex: string; height: string; favoriteColor: string;
@@ -16,11 +15,6 @@ interface ChildInfo {
 
 interface PsychologistCase {
   id: string; name: string; status: string; tone: string; childInfo?: ChildInfo; documents: string;
-}
-
-interface Appointment {
-  id: number; caseId: string; type: string; date: string; dateValue: string; time: string;
-  note: string; status: AppointmentStatus;
 }
 
 interface Evaluation {
@@ -35,7 +29,7 @@ interface Report {
 interface CalendarDay { key: string; day: number; inMonth: boolean; }
 
 interface NotificationItem {
-  id: number; category: string; title: string; description: string; when: string;
+  id: string; category: string; title: string; description: string; when: string;
   icon: string; tone: string; read: boolean;
 }
 
@@ -68,10 +62,9 @@ interface NotificationItem {
   standalone: true,
   imports: [IonContent, FormsModule],
 })
-export class PsychologistPage {
+export class PsychologistPage implements OnDestroy {
   activeSection: PsychologistSection = 'inicio';
   notificationsEnabled = true;
-  nextAppointmentId = 2;
   nextEvaluationId = 3;
   nextReportId = 1;
   appointmentFeedback = '';
@@ -81,13 +74,21 @@ export class PsychologistPage {
   profilePhotoUrl = '';
   caseSearch = '';
   selectedCase: PsychologistCase | null = null;
+  approvedFamilies: FamilyCase[] = [];
+  psychologistAppointments: import('../core/supabase/supabase.service').FamilyAppointment[] = [];
+  editingAppointmentId: string | null = null;
+  familyAppointmentDraft = { familyId: '', date: '', time: '', note: '' };
+  calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  selectedCalendarDate = this.toDateKey(new Date());
   selectedEvaluationId: number | null = null;
   activeCaseFilter = 'Todos';
   activeEvaluationFilter = 'Todas';
-  activeAppointmentFilter = 'Todas';
   activeNotificationFilter = 'Todas';
-  calendarMonth = new Date(2025, 4, 1);
-  selectedCalendarDate = '2025-05-10';
+  notificationError = '';
+  notificationsLoading = false;
+  private authSubscription: { unsubscribe: () => void } | null = null;
+  private workspaceLoadPromise: Promise<void> | null = null;
+  private workspaceReloadRequested = false;
 
   readonly sections: { id: PsychologistSection; label: string }[] = [
     { id: 'inicio', label: 'Inicio' },
@@ -113,7 +114,6 @@ export class PsychologistPage {
 
   readonly caseFilters = ['Todos', 'Pendientes', 'Registrados'];
   readonly evaluationFilters = ['Todas', 'Pendiente', 'En progreso', 'Completada'];
-  readonly appointmentFilters = ['Todas', 'Pendiente', 'Realizada', 'Cancelada'];
   readonly notificationFilters = ['Todas', 'Citas', 'Expedientes', 'Evaluaciones', 'Sistema'];
 
   readonly evaluations: Evaluation[] = [
@@ -121,23 +121,14 @@ export class PsychologistPage {
     { id: 2, caseId: '2025-0136', caseName: 'Expediente 2025-0136', title: 'Evaluación psicológica', status: 'Completada', updated: 'Registro demostrativo existente', observations: '', results: '', recommendations: '' },
   ];
 
-  readonly appointments: Appointment[] = [
-    { id: 1, caseId: '2025-0147', type: 'Evaluación psicológica', date: '10 de mayo de 2025', dateValue: '2025-05-10', time: '10:00 a. m.', note: '', status: 'Pendiente' },
-  ];
 
   readonly recentActivity = [
     { title: 'Evaluación pendiente', detail: 'Exp. 2025-0147 · dato demostrativo', when: 'Demo' },
     { title: 'Evaluación registrada', detail: 'Exp. 2025-0136 · dato demostrativo', when: 'Demo' },
   ];
 
-  readonly notifications: NotificationItem[] = [
-    { id: 1, category: 'Expedientes', title: 'Expediente asignado', description: 'Nuevo expediente de ejemplo disponible en la lista local.', when: 'Ahora', icon: 'folder', tone: 'blue-tone', read: false },
-    { id: 2, category: 'Evaluaciones', title: 'Evaluación pendiente', description: 'Hay una evaluación demostrativa pendiente de revisión.', when: 'Hace 2 h', icon: 'edit', tone: 'lilac-tone', read: false },
-    { id: 3, category: 'Citas', title: 'Cita de demostración', description: 'La agenda contiene una cita de ejemplo vinculada a un expediente.', when: 'Hace 1 día', icon: 'calendar', tone: 'pink-tone', read: true },
-    { id: 4, category: 'Sistema', title: 'Vista de demostración', description: 'La información mostrada no se sincroniza con servicios externos.', when: 'Hace 2 días', icon: 'info', tone: 'blue-tone', read: true },
-  ];
+  notifications: NotificationItem[] = [];
 
-  readonly appointmentForm = { caseId: '2025-0147', type: 'Entrevista inicial', date: '', time: '', note: '' };
   readonly evaluationDraft = { caseId: '2025-0147', status: 'En progreso' as RecordStatus, observations: '', results: '', recommendations: '' };
   readonly reportDraft = { caseId: '2025-0147', title: '', conclusions: '', recommendations: '' };
 
@@ -149,16 +140,202 @@ export class PsychologistPage {
   constructor(
     private readonly router: Router,
     private readonly supabase: SupabaseService,
+    private readonly changeDetector: ChangeDetectorRef,
   ) {
-    void this.loadProfile();
-    this.supabase.client.auth.onAuthStateChange((_event, session) => {
-      this.applyUser(session?.user ?? null);
+    this.authSubscription = this.supabase.client.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user ?? null;
+      window.setTimeout(() => {
+        this.applyUser(user);
+        if (user) void this.loadWorkspaceData();
+      }, 0);
+    }).data.subscription;
+    void this.loadWorkspaceData();
+  }
+
+  ionViewWillEnter(): void {
+    void this.loadWorkspaceData();
+  }
+
+  ngOnDestroy(): void {
+    this.authSubscription?.unsubscribe();
+  }
+
+  private loadWorkspaceData(): Promise<void> {
+    if (this.workspaceLoadPromise) {
+      this.workspaceReloadRequested = true;
+      return this.workspaceLoadPromise;
+    }
+    this.workspaceLoadPromise = Promise.all([
+      this.loadProfile(),
+      this.loadApprovedFamilies(),
+      this.loadPsychologistAppointments(),
+      this.loadNotifications(),
+    ]).then(() => undefined).finally(() => {
+      this.changeDetector.detectChanges();
+      this.workspaceLoadPromise = null;
+      if (this.workspaceReloadRequested) {
+        this.workspaceReloadRequested = false;
+        void this.loadWorkspaceData();
+      }
+    });
+    return this.workspaceLoadPromise;
+  }
+
+  private async loadApprovedFamilies(): Promise<void> {
+    try {
+      this.approvedFamilies = await this.supabase.listApprovedFamilies();
+      if (!this.familyAppointmentDraft.familyId && this.approvedFamilies.length) this.familyAppointmentDraft.familyId = this.approvedFamilies[0].family_id;
+    } catch { /* Supabase migration may not be installed yet. */ }
+    finally { this.changeDetector.detectChanges(); }
+  }
+
+  private async loadPsychologistAppointments(): Promise<void> {
+    try { this.psychologistAppointments = await this.supabase.listPsychologistFamilyAppointments(); }
+    catch { /* La migración de citas debe estar aplicada. */ }
+    finally { this.changeDetector.detectChanges(); }
+  }
+
+  private async loadNotifications(): Promise<void> {
+    this.notificationsLoading = true;
+    try {
+      const rows = await this.supabase.listMyFamilyNotifications();
+      this.notifications = rows.map((item: FamilyNotification) => ({
+        id: item.id,
+        category: item.category === 'cita' ? 'Citas' : item.category === 'documento' ? 'Expedientes' : 'Sistema',
+        title: item.title,
+        description: item.message,
+        when: new Date(item.created_at).toLocaleString('es-DO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+        icon: item.category === 'cita' ? 'calendar' : item.category === 'documento' ? 'folder' : 'bell',
+        tone: item.category === 'cita' ? 'blue-tone' : item.category === 'documento' ? 'lilac-tone' : 'pink-tone',
+        read: !!item.read_at,
+      }));
+      this.notificationError = '';
+    } catch {
+      this.notifications = [];
+      this.notificationError = 'No se pudieron cargar las notificaciones. Verifica que el módulo esté configurado.';
+    } finally {
+      this.notificationsLoading = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+
+  get calendarMonthLabel(): string {
+    return this.calendarMonth.toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
+  }
+
+  get selectedCalendarLabel(): string {
+    return new Date(`${this.selectedCalendarDate}T12:00:00`).toLocaleDateString('es-DO', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     });
   }
 
+  get calendarWeeks(): CalendarDay[][] {
+    const year = this.calendarMonth.getFullYear();
+    const month = this.calendarMonth.getMonth();
+    const offset = (new Date(year, month, 1).getDay() + 6) % 7;
+    const start = new Date(year, month, 1 - offset);
+    const days = Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
+      return { key: this.toDateKey(date), day: date.getDate(), inMonth: date.getMonth() === month };
+    });
+    return Array.from({ length: 6 }, (_, index) => days.slice(index * 7, index * 7 + 7));
+  }
+
+  get selectedDayAppointments(): import('../core/supabase/supabase.service').FamilyAppointment[] {
+    return this.psychologistAppointments.filter((appointment) => appointment.appointment_date === this.selectedCalendarDate);
+  }
+
+  hasAppointment(date: string): boolean {
+    return this.psychologistAppointments.some((appointment) => appointment.appointment_date === date);
+  }
+
+  selectCalendarDay(date: string): void {
+    this.selectedCalendarDate = date;
+    this.familyAppointmentDraft.date = date;
+  }
+
+  moveCalendarMonth(amount: number): void {
+    this.calendarMonth = new Date(this.calendarMonth.getFullYear(), this.calendarMonth.getMonth() + amount, 1);
+  }
+
+  goToToday(): void {
+    const today = new Date();
+    this.calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    this.selectCalendarDay(this.toDateKey(today));
+  }
+
+  formatAppointmentDate(value: string): string {
+    return new Date(`${value}T12:00:00`).toLocaleDateString('es-DO', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    });
+  }
+
+  private toDateKey(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  async scheduleApprovedFamilyAppointment(): Promise<void> {
+    const family = this.approvedFamilies.find((item) => item.family_id === this.familyAppointmentDraft.familyId);
+    if (!family || !this.familyAppointmentDraft.date || !this.familyAppointmentDraft.time) {
+      this.appointmentFeedback = 'Elige una familia aprobada, fecha y hora.';
+      return;
+    }
+    try {
+      const details = { familyId: family.family_id, date: this.familyAppointmentDraft.date, time: this.familyAppointmentDraft.time, note: this.familyAppointmentDraft.note };
+      if (this.editingAppointmentId) {
+        await this.supabase.updateFamilyAppointment(this.editingAppointmentId, details);
+        this.appointmentFeedback = 'Cita actualizada y visible en la cuenta familiar.';
+      } else {
+        await this.supabase.scheduleFamilyAppointment({ ...details, title: 'Cita psicológica' });
+        this.appointmentFeedback = `Cita agendada para ${family.full_name}. Ya está disponible en su cuenta familiar.`;
+      }
+      const appointmentDate = new Date(`${details.date}T12:00:00`);
+      this.calendarMonth = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), 1);
+      this.selectedCalendarDate = details.date;
+      await this.loadPsychologistAppointments();
+      this.editingAppointmentId = null;
+      this.familyAppointmentDraft.familyId = this.approvedFamilies[0]?.family_id ?? '';
+      this.familyAppointmentDraft.date = '';
+      this.familyAppointmentDraft.time = '';
+      this.familyAppointmentDraft.note = '';
+    } catch (error) { this.appointmentFeedback = error instanceof Error ? error.message : 'No se pudo agendar la cita.'; }
+  }
+
+  editFamilyAppointment(appointment: import('../core/supabase/supabase.service').FamilyAppointment): void {
+    this.editingAppointmentId = appointment.id;
+    this.familyAppointmentDraft = {
+      familyId: appointment.family_id,
+      date: appointment.appointment_date,
+      time: appointment.appointment_time.slice(0, 5),
+      note: appointment.note ?? '',
+    };
+    this.appointmentFeedback = '';
+  }
+
+  async deleteFamilyAppointment(appointmentId: string): Promise<void> {
+    try {
+      await this.supabase.deleteFamilyAppointment(appointmentId);
+      this.psychologistAppointments = this.psychologistAppointments.filter((appointment) => appointment.id !== appointmentId);
+      if (this.editingAppointmentId === appointmentId) this.editingAppointmentId = null;
+      this.appointmentFeedback = 'Cita eliminada.';
+    } catch (error) { this.appointmentFeedback = error instanceof Error ? error.message : 'No se pudo eliminar la cita.'; }
+  }
+
+  async openFamilyDocument(path: string): Promise<void> {
+    try {
+      const url = await this.supabase.getFamilyDocumentUrl(path);
+      window.open(url, '_blank', 'noopener');
+    } catch (error) {
+      this.appointmentFeedback = error instanceof Error ? error.message : 'No se pudo abrir el documento.';
+    }
+  }
+
   private async loadProfile(): Promise<void> {
-    const { data } = await this.supabase.client.auth.getUser();
-    this.applyUser(data.user);
+    try {
+      const { data } = await this.supabase.client.auth.getUser();
+      this.applyUser(data.user);
+    } catch { /* El listener de sesión volverá a cargar el perfil cuando esté disponible. */ }
+    finally { this.changeDetector.detectChanges(); }
   }
 
   private applyUser(user: { email?: string; user_metadata?: Record<string, unknown> } | null): void {
@@ -187,45 +364,9 @@ export class PsychologistPage {
     return this.evaluations.filter((item) => this.activeEvaluationFilter === 'Todas' || item.status === this.activeEvaluationFilter);
   }
 
-  get filteredAppointments(): Appointment[] {
-    return this.appointments.filter((item) => this.activeAppointmentFilter === 'Todas' || item.status === this.activeAppointmentFilter);
-  }
-
-  get upcomingAppointments(): Appointment[] {
-    const today = new Date().toISOString().slice(0, 10);
-    return this.appointments.filter((item) => item.status === 'Pendiente' && item.dateValue >= today);
-  }
-
   get filteredNotifications(): NotificationItem[] {
     return this.notifications.filter((item) => this.activeNotificationFilter === 'Todas' || item.category === this.activeNotificationFilter);
   }
-
-  get calendarMonthLabel(): string {
-    return this.calendarMonth.toLocaleDateString('es', { month: 'long', year: 'numeric' });
-  }
-
-  get calendarWeeks(): CalendarDay[][] {
-    const year = this.calendarMonth.getFullYear();
-    const month = this.calendarMonth.getMonth();
-    const offset = (new Date(year, month, 1).getDay() + 6) % 7;
-    const start = new Date(year, month, 1 - offset);
-    const days = Array.from({ length: 42 }, (_, index) => {
-      const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
-      return { key: this.toDateKey(date), day: date.getDate(), inMonth: date.getMonth() === month };
-    });
-    return Array.from({ length: 6 }, (_, index) => days.slice(index * 7, index * 7 + 7));
-  }
-
-  get selectedCalendarLabel(): string {
-    return new Date(`${this.selectedCalendarDate}T12:00:00`).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  }
-
-  get selectedDayAppointments(): Appointment[] {
-    return this.appointments.filter((item) => item.dateValue === this.selectedCalendarDate);
-  }
-
-  get scheduledAppointments(): number { return this.appointments.filter((item) => item.status !== 'Cancelada').length; }
-  get pendingAppointments(): number { return this.appointments.filter((item) => item.status === 'Pendiente').length; }
 
   get selectedCaseEvaluations(): Evaluation[] {
     return this.selectedCase ? this.evaluations.filter((item) => item.caseId === this.selectedCase?.id) : [];
@@ -248,6 +389,7 @@ export class PsychologistPage {
 
   showSection(section: PsychologistSection): void {
     this.activeSection = section;
+    if (section === 'notificaciones') void this.loadNotifications();
     this.selectedCase = null;
     this.appointmentFeedback = '';
     this.evaluationFeedback = '';
@@ -262,52 +404,9 @@ export class PsychologistPage {
   }
   closeCase(): void { this.selectedCase = null; this.selectedEvaluationId = null; }
 
-  moveCalendarMonth(amount: number): void {
-    this.calendarMonth = new Date(this.calendarMonth.getFullYear(), this.calendarMonth.getMonth() + amount, 1);
-  }
-
-  goToToday(): void {
-    const now = new Date();
-    this.calendarMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    this.selectCalendarDay(this.toDateKey(now));
-  }
-
-  selectCalendarDay(date: string): void {
-    this.selectedCalendarDate = date;
-    this.appointmentForm.date = date;
-  }
-
-  hasAppointment(date: string): boolean { return this.appointments.some((item) => item.dateValue === date); }
-  private toDateKey(date: Date): string { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
-
   focusEvaluationForm(caseId: string): void {
     this.evaluationDraft.caseId = caseId;
     document.getElementById('evaluation-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  scheduleAppointment(): void {
-    if (!this.appointmentForm.date || !this.appointmentForm.time) {
-      this.appointmentFeedback = 'Completa la fecha y la hora para agregar la cita demostrativa.';
-      return;
-    }
-    const date = new Date(`${this.appointmentForm.date}T00:00:00`);
-    this.appointments.unshift({
-      id: this.nextAppointmentId++, caseId: this.appointmentForm.caseId, type: this.appointmentForm.type,
-      date: date.toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' }),
-      dateValue: this.appointmentForm.date, time: this.appointmentForm.time,
-      note: this.appointmentForm.note, status: 'Pendiente',
-    });
-    this.appointmentFeedback = 'Cita agregada únicamente a esta vista de demostración.';
-    this.appointmentForm.date = '';
-    this.appointmentForm.time = '';
-    this.appointmentForm.note = '';
-  }
-
-  completeAppointment(id: number): void { this.setAppointmentStatus(id, 'Realizada'); }
-  cancelAppointment(id: number): void { this.setAppointmentStatus(id, 'Cancelada'); }
-  private setAppointmentStatus(id: number, status: AppointmentStatus): void {
-    const item = this.appointments.find((appointment) => appointment.id === id);
-    if (item) item.status = status;
   }
 
   saveEvaluation(): void {
@@ -347,12 +446,19 @@ export class PsychologistPage {
 
   readonly reports: Report[] = [];
 
-  toggleNotification(id: number): void {
+  async toggleNotification(id: string): Promise<void> {
     const item = this.notifications.find((notification) => notification.id === id);
-    if (item) item.read = !item.read;
+    if (!item || item.read) return;
+    item.read = true;
+    try { await this.supabase.markFamilyNotificationRead(id); }
+    catch { item.read = false; this.notificationError = 'No se pudo marcar la notificación como leída.'; }
   }
 
-  markAllRead(): void { this.notifications.forEach((item) => item.read = true); }
+  async markAllRead(): Promise<void> {
+    this.notifications.forEach((item) => item.read = true);
+    try { await this.supabase.markAllMyFamilyNotificationsRead(); }
+    catch { await this.loadNotifications(); this.notificationError = 'No se pudieron marcar las notificaciones como leídas.'; }
+  }
   changeProfilePhoto(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
