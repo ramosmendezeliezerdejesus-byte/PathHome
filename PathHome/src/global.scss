@@ -248,9 +248,53 @@ ion-content.dashboard-content {
 
 /* Estilos institucionales aislados bajo el contenedor de la página. */
 ion-content.institution-content{--background:#fdf8ec;.institution-app{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100%;font-family:Nunito,"Segoe UI",sans-serif}.institution-sidebar{position:sticky;top:0;display:flex;flex-direction:column;height:100vh;padding:24px 14px;background:#fff;border-right:1px solid #eee8f5}.brand{display:grid;place-items:center;height:76px;margin-bottom:20px}.brand img{width:150px;height:64px;object-fit:contain}.sidebar-caption{margin:0 10px 10px;color:#9699b0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}.institution-sidebar nav{display:grid;gap:5px}.institution-sidebar nav button,.institution-mobile-nav button{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 12px;border:0;border-radius:12px;background:transparent;color:#858ba9;text-align:left;font:inherit;font-weight:700;font-size:14px}.institution-sidebar nav button ion-icon{font-size:20px}.institution-sidebar nav button.active,.institution-mobile-nav button.active{background:#e8f4ea;color:#42ad66}.sidebar-footer{display:flex;align-items:center;gap:10px;margin-top:auto;padding:16px 8px;border-top:1px solid #eee8f5}.demo-mark,.profile-avatar{display:grid;place-items:center;flex:none;border-radius:50%;background:#e6f2fb;color:#526fdb;font-weight:800}.demo-mark{width:38px;height:38px}.sidebar-footer strong,.sidebar-footer small{display:block}.sidebar-footer small{margin-top:3px;color:#8a8da8;font-size:11px}.institution-main{min-width:0}.institution-topbar{position:sticky;z-index:2;top:0;display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:64px;padding:0 32px;border-bottom:1px solid #eee8f5;background:#fff}.topbar-title{font-size:16px;font-weight:750}.demo-label{color:#898eaa;font-size:12px}.page-content{width:min(100%,1280px);margin:0 auto;padding:32px}.page-heading,.section-heading{display:flex;align-items:center;gap:14px;margin-bottom:24px}.page-heading img{width:48px;height:48px;object-fit:contain}.page-heading h1,.section-heading h1{margin:0;color:#4a4e7a;font-size:28px;font-weight:800}.page-heading p,.section-heading p{margin:4px 0 0;color:#8a8da8}.shortcut-grid,.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:26px}.shortcut,.summary-card,.case-list,.table-card,.profile-card,.sign-out{border:1px solid #eee8f5;border-radius:18px;background:#fff;box-shadow:0 3px 12px #5046780c}.shortcut{display:grid;grid-template-columns:42px minmax(0,1fr);align-content:center;align-items:center;gap:0 12px;min-height:96px;padding:14px;text-align:left;color:#4a4e7a}.shortcut img{grid-row:span 2;width:40px;height:40px;object-fit:contain;mix-blend-mode:multiply}.shortcut strong{font-size:15px}.shortcut span{color:#8a8da8;font-size:12px}.blue{background:#e6f2fb}.green{background:#e3f4e8}.yellow{background:#fdefdc}.lavender{background:#efe8fa}.section-title,.table-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}.section-title h2{margin:0;font-size:18px}.section-title button{border:0;background:transparent;color:#9a82c9;font:inherit;font-weight:700;font-size:13px}.case-list,.table-card{padding:4px 18px}.case-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto 12px;align-items:center;gap:12px;min-height:78px;padding:12px 0;border-bottom:1px solid #eee8f5}.case-row:last-child{border-bottom:0}.case-icon{display:grid;width:42px;height:42px;place-items:center;border-radius:50%;color:#6585c8}.case-icon ion-icon{font-size:20px}.case-row strong{font-size:14px}.case-row p{margin:4px 0 0;color:#8a8da8;font-size:12px}.status{padding:6px 10px;border-radius:14px;font-size:11px;font-weight:700;white-space:nowrap}.pending{background:#fdefdc;color:#aa7526}.progress{background:#e6f2fb;color:#5c7eb9}.complete{background:#e3f4e8;color:#3d9b60}.arrow{color:#4a4e7a;font-size:20px}.table-heading{padding:14px 0;color:#4a4e7a}.table-heading span{color:#8a8da8;font-size:12px}.summary-card{display:grid;min-height:108px;align-content:center;justify-items:center;gap:5px;padding:14px;text-align:center}.summary-card strong{color:#4a4e7a;font-size:26px}.summary-card span{color:#8189a8;font-size:13px}.profile-card{display:flex;align-items:center;gap:16px;max-width:650px;padding:20px}.profile-avatar{width:64px;height:64px}.profile-card strong{font-size:17px}.profile-card p,.profile-card small{display:block;margin:5px 0 0;color:#8a8da8}.sign-out{display:flex;align-items:center;gap:12px;width:min(100%,650px);min-height:58px;margin-top:16px;padding:0 18px;color:#4a4e7a;text-align:left;font:inherit;font-weight:600;font-size:15px}.sign-out ion-icon{font-size:19px;color:#7180b3}.sign-out span:nth-child(2){flex:1}.institution-mobile-nav{display:none}
-@media(max-width:1100px){.institution-app{grid-template-columns:200px minmax(0,1fr)}.page-content{padding:26px}.shortcut-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:900px){.institution-app{grid-template-columns:1fr;padding-bottom:76px}.institution-sidebar{display:none}.institution-topbar{min-height:58px;padding:0 20px}.page-content{padding:22px 20px}.institution-mobile-nav{position:fixed;z-index:5;right:0;bottom:0;left:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));min-height:72px;padding:6px 4px max(6px,env(safe-area-inset-bottom));border-top:1px solid #eee8f5;background:#fff;box-shadow:0 -4px 16px #5046780c}.institution-mobile-nav button{display:grid;justify-items:center;align-content:center;gap:3px;min-width:0;min-height:50px;padding:4px 1px;font-size:9px;text-align:center}.institution-mobile-nav button ion-icon{font-size:18px}}
- @media(max-width:480px){.institution-topbar{min-height:52px;padding:0 14px}.topbar-title{font-size:14px}.demo-label{max-width:46%;font-size:9px;text-align:right}.page-content{padding:18px 14px}.page-heading,.section-heading{align-items:flex-start;margin-bottom:18px}.page-heading h1,.section-heading h1{font-size:22px}.page-heading p,.section-heading p{font-size:13px}.shortcut-grid,.summary-grid{gap:9px;margin-bottom:20px}.shortcut{grid-template-columns:32px minmax(0,1fr);min-height:82px;padding:9px;column-gap:8px}.shortcut img{width:30px;height:30px}.shortcut strong{font-size:12px}.shortcut span{font-size:10px}.case-list,.table-card{padding:2px 12px}.case-row{grid-template-columns:36px minmax(0,1fr) auto;gap:8px;min-height:68px}.case-icon{width:36px;height:36px}.case-row strong{font-size:12px}.case-row p{font-size:10px}.case-row .arrow{display:none}.status{padding:5px 7px;font-size:9px}.summary-card{min-height:86px;padding:9px}.summary-card strong{font-size:22px}.summary-card span{font-size:10px}.profile-card{padding:16px}}
+@media(max-width:1100px) {
+  ion-content.institution-content {
+    .institution-app { grid-template-columns:200px minmax(0,1fr); }
+    .page-content { padding:26px; }
+    .shortcut-grid,.summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+}
+
+@media(max-width:900px) {
+  ion-content.institution-content {
+    .institution-app { grid-template-columns:1fr; padding-bottom:76px; }
+    .institution-sidebar { display:none; }
+    .institution-topbar { min-height:58px; padding:0 20px; }
+    .page-content { padding:22px 20px; }
+    .institution-mobile-nav { position:fixed; z-index:5; right:0; bottom:0; left:0; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); min-height:72px; padding:6px 4px max(6px,env(safe-area-inset-bottom)); border-top:1px solid #eee8f5; background:#fff; box-shadow:0 -4px 16px #5046780c; }
+    .institution-mobile-nav button { display:grid; justify-items:center; align-content:center; gap:3px; min-width:0; min-height:50px; padding:4px 1px; font-size:9px; text-align:center; }
+    .institution-mobile-nav button ion-icon { font-size:18px; }
+  }
+}
+
+@media(max-width:480px) {
+  ion-content.institution-content {
+    .institution-topbar { min-height:52px; padding:0 14px; }
+    .topbar-title { font-size:14px; }
+    .demo-label { max-width:46%; font-size:9px; text-align:right; }
+    .page-content { padding:18px 14px; }
+    .page-heading,.section-heading { align-items:flex-start; margin-bottom:18px; }
+    .page-heading h1,.section-heading h1 { font-size:22px; }
+    .page-heading p,.section-heading p { font-size:13px; }
+    .shortcut-grid,.summary-grid { gap:9px; margin-bottom:20px; }
+    .shortcut { grid-template-columns:32px minmax(0,1fr); min-height:82px; padding:9px; column-gap:8px; }
+    .shortcut img { width:30px; height:30px; }
+    .shortcut strong { font-size:12px; }
+    .shortcut span { font-size:10px; }
+    .case-list,.table-card { padding:2px 12px; }
+    .case-row { grid-template-columns:36px minmax(0,1fr) auto; gap:8px; min-height:68px; }
+    .case-icon { width:36px; height:36px; }
+    .case-row strong { font-size:12px; }
+    .case-row p { font-size:10px; }
+    .case-row .arrow { display:none; }
+    .status { padding:5px 7px; font-size:9px; }
+    .summary-card { min-height:86px; padding:9px; }
+    .summary-card strong { font-size:22px; }
+    .summary-card span { font-size:10px; }
+    .profile-card { padding:16px; }
+  }
+}
 }
 
 /* Familia: el contenedor cambia de escala real según el espacio disponible. */
@@ -537,6 +581,244 @@ ion-content.dashboard-content {
   ion-content.dashboard-content {
     .welcome-header { min-height:82px; }
     .home-view { width:min(100%,1120px); margin-inline:auto; }
+
+  }
+}
+/* Institución: panel, formulario y navegación inspirados en las referencias entregadas. */
+ion-content.institution-content {
+  --background:#f4f5fc;
+  --institution-ink:#171e63;
+  --institution-muted:#6873a4;
+  --institution-line:#dfe4ff;
+  --institution-purple:#7663ec;
+  --institution-blue:#498df7;
+  --institution-green:#48c999;
+  --institution-rose:#ed5d94;
+  --institution-gold:#f5a43b;
+
+  .institution-app { position:relative; min-height:100%; grid-template-columns:204px minmax(0,1fr); background:#f4f5fc; color:var(--institution-ink); }
+  .institution-sidebar { z-index:3; box-sizing:border-box; height:100vh; padding:12px 10px 14px; border-right:1px solid #e1e5fb; background:linear-gradient(180deg,#fff 0%,#fbfbff 100%); box-shadow:3px 0 16px #3541880b; }
+  .brand { flex:none; height:104px; margin:0 0 18px; padding:8px 5px; border:1px solid #e4e8ff; border-radius:17px; background:#fff; box-shadow:0 5px 14px #414b9b10; }
+  .brand img { width:min(100%,132px); height:86px; object-fit:contain; }
+  .sidebar-caption { margin:0 8px 8px; color:#8d96bd; font-size:9px; letter-spacing:.09em; }
+  .institution-sidebar nav { display:grid; gap:5px; }
+  .institution-sidebar nav button { min-height:40px; gap:10px; padding:0 10px; border-radius:11px; color:#4e5d9a; font-size:12px; transition:background .15s ease,color .15s ease; }
+  .institution-sidebar nav button ion-icon { flex:none; color:var(--institution-purple); font-size:17px; }
+  .institution-sidebar nav button.active { background:linear-gradient(100deg,#7763ed,#8977f1); color:#fff; box-shadow:0 4px 10px #7763ed35; }
+  .institution-sidebar nav button.active ion-icon { color:#fff; }
+  .sidebar-footer { gap:8px; margin-top:auto; padding:12px 6px 9px; border-top:1px solid #e8ebf9; }
+  .demo-mark { width:34px; height:34px; background:#eeeaff; color:var(--institution-purple); font-size:11px; }
+  .sidebar-footer strong { color:var(--institution-ink); font-size:11px; }
+  .sidebar-footer small { max-width:120px; color:#8590b6; font-size:9px; line-height:1.3; }
+  .sidebar-sign-out { display:flex; flex:none; align-items:center; justify-content:center; gap:8px; min-height:37px; margin-top:9px; border:1px solid #e5e8ff; border-radius:11px; background:#f2f1ff; color:#6d61ce; font:inherit; font-size:11px; font-weight:750; }
+  .sidebar-sign-out ion-icon { font-size:16px; }
+
+  .institution-main { position:relative; isolation:isolate; display:flex; min-width:0; min-height:100vh; flex-direction:column; overflow:hidden; background:#f4f5fc; }
+  .institution-main::before { position:absolute; z-index:0; top:38px; right:0; width:min(35vw,360px); height:220px; background:url('/assets/img/img8.jpg') center/contain no-repeat; opacity:.42; content:''; pointer-events:none; }
+  .institution-main::after { position:absolute; z-index:0; right:0; bottom:0; width:min(46vw,500px); height:100px; background:url('/assets/img/img2.jpg') right bottom/cover no-repeat; opacity:.34; content:''; pointer-events:none; }
+  .institution-topbar { display:flex; flex:none; align-items:center; justify-content:space-between; gap:16px; min-height:72px; padding:0 clamp(16px,2vw,30px); border-bottom:1px solid #e2e6fb; background:#ffffffeb; backdrop-filter:blur(12px); }
+  .topbar-organization,.topbar-tools,.topbar-account { display:flex; min-width:0; align-items:center; }
+  .topbar-organization { gap:10px; }
+  .topbar-mark { display:grid; flex:none; width:34px; height:34px; place-items:center; border-radius:11px; background:#e8f1ff; color:#4189e8; }
+  .topbar-mark ion-icon { font-size:20px; }
+  .topbar-organization>span:last-child { display:grid; gap:2px; min-width:0; }
+  .topbar-title { display:flex; align-items:center; gap:4px; overflow:hidden; color:var(--institution-ink); font-size:14px; font-weight:850; text-overflow:ellipsis; white-space:nowrap; }
+  .topbar-organization small { color:var(--institution-muted); font-size:10px; }
+  .verified-mark { color:#35bb86; font-size:15px; }
+  .topbar-tools { flex:none; gap:12px; }
+  .demo-label { color:#7480ab; font-size:10px; }
+  .topbar-notifications { position:relative; display:grid; width:34px; height:34px; place-items:center; border:1px solid #e6eaff; border-radius:50%; background:#fff; color:#4f5a9a; }
+  .topbar-notifications { padding:0; cursor:pointer; }
+  .topbar-notifications ion-icon { font-size:18px; }
+  .topbar-notifications b { position:absolute; top:-4px; right:-4px; display:grid; width:15px; height:15px; place-items:center; border-radius:50%; background:#ef5366; color:#fff; font-size:9px; }
+  .topbar-account { gap:6px; color:var(--institution-ink); font-size:10px; }
+  button.topbar-account { padding:0; border:0; background:transparent; font:inherit; text-align:left; cursor:pointer; }
+  .account-avatar { display:grid; width:28px; height:28px; place-items:center; border-radius:50%; background:#795dd7; color:#fff; font-size:9px; font-weight:800; }
+  .topbar-account>ion-icon { color:#6d78a6; font-size:13px; }
+
+  .page-content { position:relative; z-index:1; box-sizing:border-box; width:min(100%,1440px); padding:18px clamp(14px,1.55vw,24px) 28px; }
+  .page-heading,.section-heading { min-width:0; gap:11px; margin-bottom:15px; }
+  .page-heading h1,.section-heading h1 { color:var(--institution-ink); font-size:clamp(18px,1.6vw,22px); font-weight:850; letter-spacing:-.025em; }
+  .page-heading p,.section-heading p { color:var(--institution-muted); font-size:11px; }
+  .section-heading-action { align-items:center; justify-content:space-between; }
+  .section-heading-action>button,.institution-form>button { min-height:36px; padding:0 12px; border:0; border-radius:10px; background:linear-gradient(100deg,#7663ec,#9280f3); color:#fff; font:inherit; font-size:11px; font-weight:800; }
+  .section-back { color:#465796; }
+  .shortcut-grid,.summary-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:15px; }
+  .institution-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:11px; }
+  .institution-metric { position:relative; display:grid; min-width:0; min-height:66px; grid-template-columns:34px minmax(0,1fr); grid-template-rows:auto auto; align-content:center; align-items:center; gap:0 8px; padding:9px 12px; border:1px solid #dce7ff; border-radius:13px; background:#eef4ff; box-shadow:0 4px 13px #4657a00b; }
+  .institution-metric.green { border-color:#d4f3e6; background:#eafaf2; }
+  .institution-metric.yellow { border-color:#ffe7ca; background:#fff5e8; }
+  .metric-icon { display:grid; width:32px; height:32px; grid-row:1/3; place-items:center; border-radius:10px; background:#fff9; color:var(--institution-blue); }
+  .institution-metric.green .metric-icon { color:var(--institution-green); }
+  .institution-metric.yellow .metric-icon { color:var(--institution-gold); }
+  .metric-icon ion-icon { font-size:20px; }
+  .institution-metric strong { color:var(--institution-ink); font-size:19px; line-height:1.05; }
+  .institution-metric>span:last-child { color:#37427f; font-size:10px; font-weight:750; }
+  .institution-dashboard-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(260px,.9fr); align-items:start; gap:12px; }
+  .institution-panel { min-width:0; border:1px solid #dfe4fb; border-radius:15px; background:#fff; box-shadow:0 5px 17px #3c4b9c0d; }
+  .children-panel,.appointments-panel,.registration-panel,.registered-panel { padding:13px; }
+  .section-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 9px; }
+  .section-title h1,.section-title h2 { margin:0; color:var(--institution-ink); font-size:14px; font-weight:850; }
+  .section-title button { flex:none; padding:4px 0; border:0; background:transparent; color:#644cf0; font:inherit; font-size:9px; font-weight:800; white-space:nowrap; }
+  .demo-action-label { flex:none; color:#7480ab; font-size:9px; font-weight:700; }
+  .children-table { overflow:hidden; border:1px solid #e8ebfb; border-radius:11px; background:#fff; }
+  .children-table-head,.children-table-row { display:grid; grid-template-columns:minmax(160px,1.5fr) minmax(50px,.55fr) minmax(110px,1fr) 44px; align-items:center; gap:8px; }
+  .children-table-head { min-height:31px; padding:0 10px; background:#f2f4ff; color:#586396; font-size:9px; font-weight:800; }
+  .children-table-row { width:100%; min-height:54px; padding:5px 10px; border:0; border-bottom:1px solid #edf0fa; background:#fff; color:#263170; font:inherit; font-size:10px; text-align:left; cursor:pointer; }
+  .children-table-row:last-child { border-bottom:0; }
+  .children-table-row:hover { background:#fafaff; }
+  .child-identity { display:flex; min-width:0; align-items:center; gap:8px; }
+  .child-identity>span:last-child { display:grid; min-width:0; gap:2px; }
+  .child-identity strong { overflow:hidden; color:#252d68; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+  .child-identity small,.registered-child-copy small { color:#7882a9; font-size:9px; }
+  .child-avatar,.registered-avatar { display:grid; flex:none; width:34px; height:34px; overflow:hidden; place-items:center; border:2px solid #e5e9ff; border-radius:50%; background:#edf2ff; color:#5774d4; }
+  .child-avatar img,.registered-avatar img { width:100%; height:100%; object-fit:cover; }
+  .child-avatar ion-icon,.registered-avatar ion-icon { font-size:19px; }
+  .child-avatar.blue,.registered-avatar.blue { border-color:#dceeff; background:#edf6ff; color:#4888e7; }
+  .child-avatar.rose,.registered-avatar.rose { border-color:#ffe0eb; background:#fff0f5; color:#dc6594; }
+  .child-avatar.mint,.registered-avatar.mint { border-color:#d8f5e7; background:#effbf5; color:#3ab987; }
+  .status-dot { display:inline-block; width:8px; height:8px; margin-right:5px; border-radius:50%; background:#49ca99; vertical-align:middle; }
+  .status-dot.waiting { background:#f3a340; }
+  .child-status { color:#376d9c; font-size:9px; }
+  .child-status.appointment-status { color:#ad6a1e; }
+  .row-action { color:#7864e9; font-size:13px; text-align:center; }
+  .row-action b { margin-left:3px; color:#8c93b0; }
+  .panel-footnote { margin:9px 2px 0; color:#8690b2; font-size:9px; }
+  .appointments-panel .section-title { margin-bottom:11px; }
+  .appointment-row { display:grid; width:100%; grid-template-columns:34px minmax(0,1fr); align-items:center; gap:9px; min-height:62px; margin-bottom:8px; padding:8px; border:1px solid #e7ebff; border-radius:11px; background:#fff; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+  .appointment-row.selected { border-color:#a89bf6; background:#f8f6ff; }
+  .appointment-date { display:grid; width:32px; height:32px; place-items:center; border-radius:9px; background:#eaf2ff; color:#4384ed; }
+  .appointment-date ion-icon { font-size:18px; }
+  .appointment-row>span:last-child { display:grid; min-width:0; gap:4px; }
+  .appointment-row strong { color:#202968; font-size:10px; }
+  .appointment-row small { color:#7882a9; font-size:9px; }
+  .panel-action { display:flex; width:100%; align-items:center; justify-content:center; gap:7px; min-height:34px; margin-top:8px; border:0; border-radius:10px; background:linear-gradient(100deg,#7864ee,#8975f0); color:#fff; font:inherit; font-size:10px; font-weight:800; }
+  .panel-action ion-icon { font-size:15px; }
+  .panel-action span { margin-left:auto; }
+
+  .privacy-label { display:flex; flex:none; align-items:center; gap:5px; color:#6673a5; font-size:9px; font-weight:750; }
+  .privacy-label ion-icon { color:#42bd8d; font-size:15px; }
+  .child-registration-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(250px,.85fr); align-items:start; gap:12px; }
+  .registration-panel { overflow:hidden; padding:0; }
+  .registration-heading { display:flex; align-items:center; gap:9px; min-height:51px; padding:8px 12px; border-bottom:1px solid #edf0fb; background:linear-gradient(100deg,#fff,#f8f8ff); }
+  .registration-heading>span { display:grid; width:31px; height:31px; place-items:center; border-radius:9px; background:#7967ee; color:#fff; }
+  .registration-heading ion-icon { font-size:20px; }
+  .registration-heading h2 { margin:0; color:var(--institution-ink); font-size:13px; font-weight:850; }
+  .registration-heading p { margin:2px 0 0; color:#707ba5; font-size:9px; }
+  .child-form-layout { display:grid; grid-template-columns:minmax(118px,.62fr) minmax(0,1fr); gap:12px; padding:12px; }
+  .photo-upload { position:relative; display:grid; min-height:158px; align-content:center; justify-items:center; gap:5px; border:1px dashed #c9d1ff; border-radius:11px; background:#f8f8ff; color:#4d46b5; text-align:center; cursor:default; }
+  .photo-upload input { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+  .photo-upload:focus-within { outline:2px solid #a89bf6; outline-offset:2px; }
+  .photo-upload>ion-icon { color:#7b68ed; font-size:31px; }
+  .photo-upload strong { color:#252c70; font-size:11px; }
+  .photo-upload>span { color:#68739f; font-size:9px; line-height:1.35; }
+  .child-form-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:8px 10px; }
+  .child-form-fields label { display:grid; min-width:0; gap:4px; color:#252d69; font-size:9px; font-weight:800; }
+  .child-form-fields label>span b { color:#ef6578; }
+  .child-form-fields input,.child-form-fields select,.child-form-fields textarea { box-sizing:border-box; width:100%; min-width:0; min-height:34px; padding:7px 9px; border:1px solid #dce2ff; border-radius:8px; outline:0; background:#fff; color:#263273; font:inherit; font-size:10px; }
+  .child-form-fields input:focus,.child-form-fields select:focus,.child-form-fields textarea:focus { border-color:#9586f1; box-shadow:0 0 0 2px #9384f01c; }
+  .child-form-fields input::placeholder,.child-form-fields textarea::placeholder { color:#8790b4; }
+  .child-form-fields textarea { min-height:45px; resize:vertical; }
+  .child-form-fields .full-field { grid-column:1/-1; }
+  .registration-actions { display:flex; align-items:center; justify-content:flex-end; gap:7px; padding:0 12px 12px; }
+  .demo-save-notice { flex:1; color:#6975a0; font-size:9px; }
+  .secondary-button,.primary-button { min-height:31px; padding:0 11px; border:1px solid #dfe3fb; border-radius:8px; font:inherit; font-size:9px; font-weight:800; }
+  .secondary-button { background:#f7f8ff; color:#596591; }
+  .primary-button { border-color:transparent; background:linear-gradient(100deg,#7562e9,#8d78ef); color:#fff; box-shadow:0 3px 8px #7966e52b; }
+  .registered-panel { display:grid; gap:5px; }
+  .registered-panel .section-title h2 { font-size:13px; }
+  .registered-list { display:grid; }
+  .registered-child { display:grid; width:100%; grid-template-columns:35px minmax(0,1fr) 8px; align-items:center; gap:8px; min-height:51px; padding:4px 0; border:0; border-bottom:1px solid #edf0f9; background:#fff; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+  .registered-child:last-child { border-bottom:0; }
+  .registered-avatar { width:32px; height:32px; }
+  .registered-child-copy { display:grid; min-width:0; gap:3px; }
+  .registered-child-copy strong { overflow:hidden; color:#242b68; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+  .registered-child>i { width:8px; height:8px; border-radius:50%; background:#4bc996; }
+  .privacy-card { align-items:center; gap:8px; margin-top:8px; padding:10px; border:1px solid #e0e4ff; border-radius:11px; background:#f0efff; }
+  .privacy-card>span { width:32px; height:32px; background:#e3e0ff; color:#7160dc; font-size:17px; }
+  .privacy-card strong { color:#28316e; font-size:10px; }
+  .privacy-card p { margin-top:3px; color:#6e789f; font-size:9px; }
+
+  .case-detail-card,.workflow-actions button,.institution-form,.timeline-card,.profile-card,.sign-out { border-color:var(--institution-line); box-shadow:0 5px 15px #3c4b9c0d; }
+  .institution-form { gap:11px; margin:0; }
+  .institution-form label { color:#293370; font-size:11px; }
+  .institution-form input,.institution-form select,.institution-form textarea { border-color:#dfe4ff; font-size:11px; }
+  .institution-form>button { grid-column:1/-1; justify-self:end; }
+    .institution-form input:invalid:focus,.institution-form select:invalid:focus,.institution-form textarea:invalid:focus,.child-form-fields input:invalid:focus,.child-form-fields select:invalid:focus { border-color:#e47b82; background:#fffafb; }
+  .form-actions { display:flex; grid-column:1/-1; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; padding-top:4px; }
+  .form-actions .demo-save-notice { min-width:min(100%,260px); margin-right:auto; }
+  .form-actions>button[type='submit'] { min-height:34px; padding:0 12px; border:0; border-radius:9px; background:linear-gradient(100deg,#7562e9,#8d78ef); color:#fff; font:inherit; font-size:10px; font-weight:800; }
+  .form-actions .secondary-button,.section-return { min-height:34px; padding:0 11px; border:1px solid #dfe3fb; border-radius:9px; background:#f7f8ff; color:#596591; font:inherit; font-size:10px; font-weight:800; }
+  .appointment-detail { display:grid; gap:4px; margin:0 0 8px; padding:10px; border:1px solid #e5e2fb; border-radius:10px; background:#f8f7ff; color:#4a4e7a; }
+  .appointment-detail strong { color:#242d70; font-size:10px; }
+  .appointment-detail span,.appointment-detail small { color:#7882a9; font-size:9px; }
+  .appointment-detail-close { justify-self:end; padding:3px 0; border:0; background:transparent; color:#6654cb; font:inherit; font-size:9px; font-weight:800; cursor:pointer; }
+  .notification-list { display:grid; gap:9px; margin-top:12px; }
+  .notification-card { display:grid; grid-template-columns:42px minmax(0,1fr) auto; align-items:center; gap:11px; padding:13px; border:1px solid #dfe4fb; border-radius:14px; background:#fff; box-shadow:0 4px 13px #3c4b9c0b; }
+  .notification-card>div { display:grid; min-width:0; gap:4px; }
+  .notification-card strong { color:#252d68; font-size:12px; }
+  .notification-card p,.notification-card small { margin:0; color:#7781a7; font-size:10px; line-height:1.4; }
+  .notification-card>button { min-height:30px; padding:0 10px; border:1px solid #dfe4fb; border-radius:9px; background:#f5f3ff; color:#6756c7; font:inherit; font-size:9px; font-weight:750; cursor:pointer; }
+  .notification-card>button:disabled { background:#f3f7f5; color:#5a9e7d; cursor:default; }
+  .notification-card.is-read { background:#fbfcff; }
+  .section-return { margin-top:10px; cursor:pointer; }
+}
+
+@media(max-width:1180px) {
+  ion-content.institution-content {
+    .institution-dashboard-grid { grid-template-columns:minmax(0,1fr); }
+    .appointments-panel { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .appointments-panel .section-title,.appointments-panel .panel-action { grid-column:1/-1; }
+    .appointment-row { margin:0; }
+  }
+}
+
+@media(max-width:900px) {
+  ion-content.institution-content {
+    .institution-app { padding-bottom:82px; }
+    .institution-mobile-nav { grid-template-columns:repeat(7,minmax(0,1fr)); }
+    .institution-main { min-height:100%; overflow:visible; }
+    .institution-topbar { position:sticky; top:0; z-index:4; min-height:62px; padding:0 18px; }
+    .topbar-tools { gap:8px; }
+    .demo-label { display:none; }
+    .page-content { padding:16px 18px 24px; }
+    .institution-metrics { gap:8px; }
+    .institution-metric { min-height:62px; padding:8px; }
+    .child-registration-grid { grid-template-columns:minmax(0,1.3fr) minmax(220px,.8fr); }
+  }
+}
+
+@media(max-width:620px) {
+  ion-content.institution-content {
+    .institution-topbar { min-height:58px; gap:8px; padding:0 12px; }
+    .topbar-mark { width:30px; height:30px; }
+    .topbar-title { max-width:48vw; font-size:11px; }
+    .topbar-organization small { max-width:48vw; overflow:hidden; font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
+    .topbar-tools { gap:6px; }
+    .topbar-account { gap:0; }
+    .topbar-account>strong,.topbar-account>ion-icon { display:none; }
+    .account-avatar { width:25px; height:25px; }
+    .topbar-notifications { width:30px; height:30px; }
+    .page-content { padding:13px 12px 20px; }
+    .institution-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .institution-metric:last-child { grid-column:1/-1; }
+    .institution-dashboard-grid,.child-registration-grid { grid-template-columns:minmax(0,1fr); }
+    .appointments-panel { grid-template-columns:minmax(0,1fr); }
+    .appointments-panel .section-title,.appointments-panel .panel-action { grid-column:1; }
+    .children-panel,.appointments-panel,.registered-panel { padding:11px; }
+    .children-table-head { display:none; }
+    .children-table-row { grid-template-columns:minmax(0,1fr) auto; gap:6px 8px; padding:8px; }
+    .children-table-row .child-identity { grid-column:1/-1; }
+    .children-table-row>[role='cell']:nth-child(2) { grid-column:1; color:#64709b; font-size:9px; }
+    .children-table-row>[role='cell']:nth-child(3) { grid-column:1; }
+    .children-table-row .row-action { grid-column:2; grid-row:2/4; }
+    .child-registration-page .section-heading-action { align-items:flex-start; }
+    .privacy-label { display:none; }
+    .child-form-layout { grid-template-columns:minmax(0,1fr); }
+    .notification-card { grid-template-columns:36px minmax(0,1fr); }
+    .notification-card>.case-icon { grid-row:1/3; }
+    .notification-card>button { grid-column:2; justify-self:start; }
+    .photo-upload { min-height:118px; }
   }
 }
 
@@ -546,5 +828,20 @@ ion-content.dashboard-content {
     .family-brand { gap:7px; font-size:20px; }
     .family-brand img { width:36px; height:36px; }
     .family-menu-toggle { width:40px; height:40px; }
+
+  }
+  ion-content.institution-content {
+    .institution-topbar { padding:0 9px; }
+    .topbar-organization { gap:6px; }
+    .topbar-title { max-width:52vw; font-size:10px; }
+    .topbar-mark { width:27px; height:27px; }
+    .topbar-account { display:none; }
+    .section-heading-action { align-items:flex-start; }
+    .child-form-fields { grid-template-columns:minmax(0,1fr); }
+    .child-form-fields .full-field { grid-column:1; }
+    .registration-actions { flex-wrap:wrap; }
+    .demo-save-notice { flex-basis:100%; }
+    .institution-mobile-nav button { gap:3px; padding:3px 0; font-size:8px; }
+    .institution-mobile-nav button ion-icon { font-size:17px; }
   }
 }
