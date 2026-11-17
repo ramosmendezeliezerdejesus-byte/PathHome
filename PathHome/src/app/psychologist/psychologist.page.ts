@@ -30,7 +30,7 @@ interface CalendarDay { key: string; day: number; inMonth: boolean; }
 
 interface NotificationItem {
   id: string; category: string; title: string; description: string; when: string;
-  icon: string; tone: string; read: boolean;
+  icon: string; tone: string; read: boolean; relatedFamilyId: string | null;
 }
 
 @Component({
@@ -64,6 +64,7 @@ interface NotificationItem {
 })
 export class PsychologistPage implements OnDestroy {
   activeSection: PsychologistSection = 'inicio';
+  mobileMenuOpen = false;
   notificationsEnabled = true;
   nextEvaluationId = 3;
   nextReportId = 1;
@@ -74,6 +75,7 @@ export class PsychologistPage implements OnDestroy {
   profilePhotoUrl = '';
   caseSearch = '';
   selectedCase: PsychologistCase | null = null;
+  selectedPsychologistFamily: FamilyCase | null = null;
   approvedFamilies: FamilyCase[] = [];
   psychologistAppointments: import('../core/supabase/supabase.service').FamilyAppointment[] = [];
   editingAppointmentId: string | null = null;
@@ -201,13 +203,14 @@ export class PsychologistPage implements OnDestroy {
       const rows = await this.supabase.listMyFamilyNotifications();
       this.notifications = rows.map((item: FamilyNotification) => ({
         id: item.id,
-        category: item.category === 'cita' ? 'Citas' : item.category === 'documento' ? 'Expedientes' : 'Sistema',
+        category: item.title === 'Familia lista para evaluación' ? 'Expedientes' : item.category === 'cita' ? 'Citas' : item.category === 'documento' ? 'Expedientes' : 'Sistema',
         title: item.title,
         description: item.message,
         when: new Date(item.created_at).toLocaleString('es-DO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-        icon: item.category === 'cita' ? 'calendar' : item.category === 'documento' ? 'folder' : 'bell',
-        tone: item.category === 'cita' ? 'blue-tone' : item.category === 'documento' ? 'lilac-tone' : 'pink-tone',
+        icon: item.title === 'Familia lista para evaluación' || item.category === 'documento' ? 'folder' : item.category === 'cita' ? 'calendar' : 'bell',
+        tone: item.title === 'Familia lista para evaluación' || item.category === 'documento' ? 'lilac-tone' : item.category === 'cita' ? 'blue-tone' : 'pink-tone',
         read: !!item.read_at,
+        relatedFamilyId: item.related_family_id ?? null,
       }));
       this.notificationError = '';
     } catch {
@@ -272,6 +275,23 @@ export class PsychologistPage implements OnDestroy {
 
   private toDateKey(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
+  familyDocumentDate(value: string): string {
+    return new Date(value).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  openApprovedFamily(family: FamilyCase): void {
+    this.selectedPsychologistFamily = family;
+  }
+
+  closeApprovedFamily(): void {
+    this.selectedPsychologistFamily = null;
+  }
+
+  scheduleFamilyFromRecord(family: FamilyCase): void {
+    this.familyAppointmentDraft.familyId = family.family_id;
+    this.showSection('citas');
   }
 
   async scheduleApprovedFamilyAppointment(): Promise<void> {
@@ -389,12 +409,18 @@ export class PsychologistPage implements OnDestroy {
 
   showSection(section: PsychologistSection): void {
     this.activeSection = section;
+    this.mobileMenuOpen = false;
     if (section === 'notificaciones') void this.loadNotifications();
+    if (section !== 'expedientes') this.selectedPsychologistFamily = null;
     this.selectedCase = null;
     this.appointmentFeedback = '';
     this.evaluationFeedback = '';
     this.reportFeedback = '';
     this.profileFeedback = '';
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen = !this.mobileMenuOpen;
   }
 
   openCase(item: PsychologistCase): void {
@@ -454,6 +480,29 @@ export class PsychologistPage implements OnDestroy {
     catch { item.read = false; this.notificationError = 'No se pudo marcar la notificación como leída.'; }
   }
 
+  async openNotification(notification: NotificationItem): Promise<void> {
+    await this.toggleNotification(notification.id);
+    if (notification.title !== 'Familia lista para evaluación' || !notification.relatedFamilyId) return;
+
+    if (!this.approvedFamilies.some((family) => family.family_id === notification.relatedFamilyId)) {
+      await this.loadApprovedFamilies();
+    }
+    const family = this.approvedFamilies.find((item) => item.family_id === notification.relatedFamilyId);
+    if (!family) {
+      this.notificationError = 'La familia de esta notificación ya no está disponible para agendar.';
+      this.changeDetector.detectChanges();
+      return;
+    }
+
+    this.showSection('citas');
+    this.familyAppointmentDraft.familyId = family.family_id;
+    window.setTimeout(() => {
+      const form = document.getElementById('appointment-form');
+      form?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      form?.querySelector<HTMLSelectElement>('select[name="approvedFamily"]')?.focus({ preventScroll: true });
+    }, 0);
+  }
+
   async markAllRead(): Promise<void> {
     this.notifications.forEach((item) => item.read = true);
     try { await this.supabase.markAllMyFamilyNotificationsRead(); }
@@ -483,6 +532,7 @@ export class PsychologistPage implements OnDestroy {
     this.profileFeedback = error ? 'No se pudo guardar la información.' : 'Información personal guardada.';
   }
   async signOut(): Promise<void> {
+    this.mobileMenuOpen = false;
     await this.supabase.client.auth.signOut();
     await this.router.navigateByUrl('/login');
   }

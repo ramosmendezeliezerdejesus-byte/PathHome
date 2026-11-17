@@ -1,5 +1,5 @@
 <ion-content [fullscreen]="true" class="register-content">
-  <main class="register-screen">
+  <main class="register-screen" [class.register-screen-types]="pantalla === 'tipos'">
     @if (pantalla === 'tipos') {
       <app-registro-tipos (seleccionado)="seleccionarTipo($event)" (login)="irALogin()" />
     } @else if (pantalla === 'familia') {

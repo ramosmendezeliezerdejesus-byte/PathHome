@@ -6,7 +6,7 @@ import {
   barChartOutline, businessOutline, calendarOutline, checkmarkCircleOutline,
   closeCircleOutline, documentTextOutline, folderOpenOutline, homeOutline,
   logOutOutline, peopleOutline, personCircleOutline, personOutline, refreshOutline,
-  shieldCheckmarkOutline, timeOutline,
+  shieldCheckmarkOutline, timeOutline, menuOutline, closeOutline,
 } from 'ionicons/icons';
 import {
   AdminUser,
@@ -36,8 +36,11 @@ type AdminSection = 'solicitudes' | 'usuarios' | 'expedientes' | 'citas' | 'repo
 })
 export class AdminPage {
   activeSection: AdminSection = 'solicitudes';
+  mobileMenuOpen = false;
   requests: AdminVerificationRequest[] = [];
   users: AdminUser[] = [];
+  roleDrafts: Record<string, AdminUser['account_type']> = {};
+  roleSavingId: string | null = null;
   loading = true;
   working = false;
   error = '';
@@ -71,7 +74,7 @@ export class AdminPage {
       barChartOutline, businessOutline, calendarOutline, checkmarkCircleOutline,
       closeCircleOutline, documentTextOutline, folderOpenOutline, homeOutline,
       logOutOutline, peopleOutline, personCircleOutline, personOutline, refreshOutline,
-      shieldCheckmarkOutline, timeOutline,
+      shieldCheckmarkOutline, timeOutline, menuOutline, closeOutline,
     });
     void this.loadData();
   }
@@ -100,6 +103,40 @@ export class AdminPage {
     return this.users.filter((user) => user.account_type === 'institucion').length;
   }
 
+  setRoleDraft(userId: string, event: Event): void {
+    const role = (event.target as HTMLSelectElement).value;
+    if (role === 'familia' || role === 'profesional' || role === 'institucion') {
+      this.roleDrafts[userId] = role;
+    }
+  }
+
+  async changeUserRole(user: AdminUser): Promise<void> {
+    const accountType = this.roleDrafts[user.id] ?? user.account_type;
+    if (user.is_admin || accountType === user.account_type || this.roleSavingId) return;
+
+    this.roleSavingId = user.id;
+    this.error = '';
+    this.notice = '';
+    this.changeDetector.markForCheck();
+    try {
+      await this.supabase.changeAdminUserRole(user.id, accountType);
+      this.users = await this.supabase.listAdminUsers();
+      delete this.roleDrafts[user.id];
+      this.notice = accountType === 'familia'
+        ? `El rol de ${user.full_name} cambió a familia solicitante.`
+        : `El rol de ${user.full_name} cambió a ${this.roleLabel(accountType)}. Para acceder a ese apartado deberá tener su verificación aprobada.`;
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'No se pudo cambiar el rol de esta persona.';
+    } finally {
+      this.roleSavingId = null;
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  get familyDocumentCount(): number {
+    return this.familyCases.reduce((total, family) => total + family.documents.length, 0);
+  }
+
   async loadData(): Promise<void> {
     this.loading = true;
     this.error = '';
@@ -125,8 +162,13 @@ export class AdminPage {
 
   selectSection(section: AdminSection): void {
     this.activeSection = section;
+    this.mobileMenuOpen = false;
     this.notice = '';
     if (section === 'expedientes') void this.loadFamilyCases();
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen = !this.mobileMenuOpen;
   }
 
   private async loadFamilyCases(): Promise<void> {

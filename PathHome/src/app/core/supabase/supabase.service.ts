@@ -42,6 +42,7 @@ export interface FamilyAppointment {
 export interface FamilyNotification {
   id: string;
   family_id: string;
+  related_family_id?: string | null;
   category: 'cita' | 'documento' | 'sistema';
   title: string;
   message: string;
@@ -139,6 +140,14 @@ export class SupabaseService {
     const { data, error } = await this.client.rpc('admin_list_users');
     if (error) throw error;
     return (data ?? []) as AdminUser[];
+  }
+
+  async changeAdminUserRole(userId: string, accountType: AdminUser['account_type']): Promise<void> {
+    const { error } = await this.client.rpc('admin_change_user_role', {
+      target_user_id: userId,
+      new_account_type: accountType,
+    });
+    if (error) throw error;
   }
 
   async reviewVerificationRequest(

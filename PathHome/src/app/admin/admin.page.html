@@ -1,8 +1,17 @@
 <ion-content class="admin-content">
   <div class="admin-shell">
-    <aside class="sidebar">
+    <header class="mobile-topbar">
       <a class="brand" href="/admin" aria-label="PathHome, panel administrador"><img class="brand-logo" src="/assets/img/logo_splash.png" alt="">PathHome</a>
-      <nav aria-label="Navegación administrativa">
+      <button type="button" class="menu-toggle" [attr.aria-expanded]="mobileMenuOpen" aria-controls="admin-navigation" [attr.aria-label]="mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'" (click)="toggleMobileMenu()">
+        <ion-icon [name]="mobileMenuOpen ? 'close-outline' : 'menu-outline'" aria-hidden="true"></ion-icon>
+      </button>
+    </header>
+    @if (mobileMenuOpen) {
+      <button type="button" class="menu-backdrop" aria-label="Cerrar menú" (click)="toggleMobileMenu()"></button>
+    }
+    <aside class="sidebar" [class.mobile-open]="mobileMenuOpen">
+      <a class="brand" href="/admin" aria-label="PathHome, panel administrador"><img class="brand-logo" src="/assets/img/logo_splash.png" alt="">PathHome</a>
+      <nav id="admin-navigation" aria-label="Navegación administrativa">
         @for (item of navigation; track item.id) {
           <button type="button" [class.active]="activeSection === item.id" (click)="selectSection(item.id)">
             <ion-icon class="nav-icon" [name]="item.icon" aria-hidden="true"></ion-icon>
@@ -37,6 +46,13 @@
 
         @if (notice) { <p class="notice" role="status">{{ notice }}</p> }
         @if (error) { <p class="error" role="alert">{{ error }}</p> }
+        @if (!selectedFamily && !loading && familyCases.length) {
+          <section class="family-case-overview" aria-label="Resumen de expedientes">
+            <span class="family-overview-icon"><ion-icon name="folder-open-outline" aria-hidden="true"></ion-icon></span>
+            <div><strong>{{ familyCases.length }} {{ familyCases.length === 1 ? 'familia con expediente' : 'familias con expediente' }}</strong><small>Consulta cada expediente y revisa sus documentos en conjunto.</small></div>
+            <span class="family-overview-count"><b>{{ familyDocumentCount }}</b><small>{{ familyDocumentCount === 1 ? 'documento' : 'documentos' }}</small></span>
+          </section>
+        }
 
         <section class="request-section">
           <div class="section-title-row"><div><p class="page-eyebrow">REVISIÓN DE ACCESO</p><h2>Solicitudes</h2></div><button type="button" class="refresh" [disabled]="loading" (click)="loadData()"><ion-icon name="refresh-outline"></ion-icon>{{ loading ? 'Actualizando…' : 'Actualizar' }}</button></div>
@@ -88,8 +104,24 @@
             @for (user of users; track user.id) {
               <article class="user-card">
                 <div class="request-avatar"><ion-icon [name]="user.is_admin ? 'shield-checkmark-outline' : roleIcon(user.account_type)" aria-hidden="true"></ion-icon></div>
-                <div class="user-main"><strong>{{ user.full_name }}</strong><span>{{ user.email }}</span><small>{{ formatDate(user.created_at) }}</small></div>
-                <span class="role-chip">{{ user.is_admin ? 'Administrador' : roleLabel(user.account_type) }}</span>
+                <div class="user-main">
+                  <strong>{{ user.full_name }}</strong><span>{{ user.email }}</span><small>{{ formatDate(user.created_at) }}</small>
+                  @if (!user.is_admin) {
+                    <div class="user-role-editor">
+                      <label class="visually-hidden" [attr.for]="'role-' + user.id">Rol de {{ user.full_name }}</label>
+                      <select [id]="'role-' + user.id" [value]="roleDrafts[user.id] ?? user.account_type" [disabled]="roleSavingId === user.id" (change)="setRoleDraft(user.id, $event)">
+                        <option value="familia">Familia solicitante</option>
+                        <option value="profesional">Psicólogo/a</option>
+                        <option value="institucion">Institución</option>
+                      </select>
+                      <button type="button" [disabled]="roleSavingId === user.id || (roleDrafts[user.id] ?? user.account_type) === user.account_type" (click)="changeUserRole(user)">
+                        {{ roleSavingId === user.id ? 'Guardando…' : 'Guardar rol' }}
+                      </button>
+                    </div>
+                  } @else {
+                    <span class="role-chip">Administrador</span>
+                  }
+                </div>
                 @if (!user.is_admin && user.account_type !== 'familia') {
                   <span class="status" [class]="'status ' + (user.verification_status || 'sin-solicitud')">{{ statusLabel(user.verification_status) }}</span>
                 } @else if (user.is_admin) {

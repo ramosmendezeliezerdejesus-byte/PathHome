@@ -1,5 +1,26 @@
 <ion-content [fullscreen]="true" class="dashboard-content">
   <div class="dashboard-frame">
+  <header class="family-mobile-topbar">
+    <button class="family-brand" type="button" aria-label="PathHome, inicio" (click)="showSection('inicio')"><img src="/assets/img/logo_splash.png" alt=""><span>PathHome</span></button>
+    <button type="button" class="family-menu-toggle" [attr.aria-expanded]="mobileMenuOpen" aria-controls="family-navigation" [attr.aria-label]="mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'" (click)="toggleMobileMenu()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="mobileMenuOpen ? 'M6 6l12 12M18 6L6 18' : 'M4 6h16M4 12h16M4 18h16'"></path></svg>
+    </button>
+  </header>
+  @if (mobileMenuOpen) {
+    <button type="button" class="family-menu-backdrop" aria-label="Cerrar menú" (click)="toggleMobileMenu()"></button>
+  }
+  <aside class="family-mobile-menu" [class.open]="mobileMenuOpen" aria-label="Navegación familiar">
+    <button class="family-menu-brand" type="button" aria-label="PathHome, inicio" (click)="showSection('inicio')"><img src="/assets/img/logo_splash.png" alt=""><span>PathHome</span></button>
+    <nav id="family-navigation">
+      <button type="button" [class.active]="primarySection === 'inicio'" (click)="showSection('inicio')"><ion-icon name="home-outline" aria-hidden="true"></ion-icon><span>Inicio</span></button>
+      <button type="button" [class.active]="primarySection === 'proceso'" (click)="showSection('proceso')"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span>Mi proceso</span></button>
+      <button type="button" [class.active]="activeSection === 'asistente'" (click)="showSection('asistente')"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon><span>Asistente virtual</span></button>
+      <button type="button" [class.active]="primarySection === 'notificaciones'" (click)="showSection('notificaciones')"><ion-icon name="notifications-outline" aria-hidden="true"></ion-icon><span>Notificaciones</span>@if (unreadCount) { <b>{{ unreadCount }}</b> }</button>
+      <button type="button" [class.active]="primarySection === 'perfil'" (click)="showSection('perfil')"><ion-icon name="person-outline" aria-hidden="true"></ion-icon><span>Perfil</span></button>
+      <button type="button" [class.active]="activeSection === 'mas'" (click)="showSection('mas')"><ion-icon name="grid-outline" aria-hidden="true"></ion-icon><span>Más opciones</span></button>
+    </nav>
+    <button class="family-menu-logout" type="button" (click)="signOut()"><ion-icon name="log-out-outline" aria-hidden="true"></ion-icon><span>Cerrar sesión</span></button>
+  </aside>
   <main class="dashboard-shell">
     <p class="demo-note">Tus documentos se guardan de forma privada y solo los revisan el administrador y los psicólogos autorizados.</p>
 
@@ -17,16 +38,6 @@
       </section>
     } @else if (activeSection === 'inicio') {
       <section class="view home-view" aria-labelledby="home-title">
-        <div class="home-topbar" aria-label="Accesos de la pantalla de inicio">
-          <span class="menu-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
-          </span>
-          <button class="topbar-bell" type="button" aria-label="Abrir notificaciones" (click)="showSection('notificaciones')">
-            <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
-            @if (unreadCount) { <b>{{ unreadCount }}</b> }
-          </button>
-        </div>
-
         <header class="welcome-header">
           <div class="avatar" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></div>
           <div class="welcome-copy">
@@ -72,7 +83,7 @@
           </button>
         }
 
-        <button class="card assistant-card" type="button" [attr.aria-expanded]="assistantOpen" (click)="toggleAssistant()">
+        <button class="card assistant-card" type="button" (click)="showSection('asistente')">
           <span class="assistant-avatar" aria-hidden="true"><ion-icon name="chatbubble-ellipses-outline"></ion-icon></span>
           <span class="assistant-copy">
             <strong>Asistente virtual</strong>
@@ -80,12 +91,6 @@
           </span>
           <span class="chevron" aria-hidden="true">›</span>
         </button>
-        @if (assistantOpen) {
-          <p class="assistant-reply" role="status">
-            Esta es una vista demostrativa. El asistente no consulta expedientes ni determina requisitos o decisiones.
-          </p>
-        }
-
       </section>
     }
 
@@ -337,8 +342,29 @@
 
     @if (activeSection === 'asistente' || activeSection === 'mensajes') {
       <section class="view conversation-view" aria-labelledby="conversation-title">
-        <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="conversation-title">{{ activeSection === 'asistente' ? 'Asistente virtual' : 'Mensajes' }}</h1></header>
+        <header class="view-heading"><button class="back-button" type="button" [attr.aria-label]="activeSection === 'asistente' ? 'Volver a inicio' : 'Volver a más opciones'" (click)="showSection(activeSection === 'asistente' ? 'inicio' : 'mas')">‹</button><h1 id="conversation-title">{{ activeSection === 'asistente' ? 'Asistente virtual' : 'Mensajes' }}</h1></header>
         <p class="section-note">{{ activeSection === 'asistente' ? 'Consulta información general de tu proceso.' : 'Comunicación con la institución.' }}</p>
+        @if (activeSection === 'asistente') {
+          <div class="assistant-chat" aria-live="polite" aria-label="Conversación con el asistente">
+            <article class="assistant-message assistant-welcome">
+              <div class="assistant-message-label"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon><span>PATHHOME IA</span></div>
+              <div class="assistant-text"><p>¡Hola, {{ firstName }}! Soy la IA de PathHome. Puedo ayudarte con tus documentos y las etapas de tu proceso. ¿Qué te gustaría saber?</p></div>
+            </article>
+            @for (message of assistantMessages; track $index) {
+              <article class="assistant-message" [class.from-user]="message.role === 'user'">
+                @if (message.role === 'assistant') {
+                  <div class="assistant-message-label"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon><span>PATHHOME IA</span></div>
+                  <div class="assistant-text" [innerHTML]="formatAssistantMessage(message.text)"></div>
+                } @else {
+                  <span class="assistant-message-label">Tú</span>
+                  <p class="assistant-user-text">{{ message.text }}</p>
+                }
+              </article>
+            }
+            @if (assistantBusy) { <article class="assistant-message"><div class="assistant-message-label"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon><span>PATHHOME IA</span></div><div class="assistant-text"><p>Estoy revisando la información…</p></div></article> }
+            @if (assistantError) { <p class="assistant-error" role="alert">{{ assistantError }}</p> }
+          </div>
+        }
         <article class="card conversation-card">
           <span class="assistant-avatar" aria-hidden="true"><ion-icon [name]="activeSection === 'asistente' ? 'chatbubble-ellipses-outline' : 'help-circle-outline'"></ion-icon></span>
           <div class="conversation-copy">
@@ -347,9 +373,17 @@
           </div>
         </article>
         @if (activeSection === 'asistente') {
-          <div class="reply-chips" aria-label="Temas de ayuda"><span>Documentos pendientes</span><span>Próxima cita</span><span>Etapas del proceso</span></div>
+          <div class="reply-chips" aria-label="Temas de ayuda">
+            <button type="button" (click)="askAssistant('¿Qué documentos necesito enviar?')">Documentos necesarios</button>
+            <button type="button" (click)="askAssistant('¿Qué etapa sigue en mi proceso?')">Etapas del proceso</button>
+          </div>
+          <form class="conversation-input" (ngSubmit)="askAssistant()">
+            <input name="assistantDraft" [(ngModel)]="assistantDraft" maxlength="1000" placeholder="Escribe tu pregunta…" aria-label="Escribe tu pregunta" [disabled]="assistantBusy" />
+            <button type="submit" aria-label="Enviar pregunta" [disabled]="assistantBusy || !assistantDraft.trim()"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon></button>
+          </form>
+        } @else {
+          <div class="conversation-input" aria-disabled="true"><span>Escribe un mensaje…</span><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon></div>
         }
-        <div class="conversation-input" aria-disabled="true"><span>Escribe un mensaje…</span><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon></div>
       </section>
     }
 

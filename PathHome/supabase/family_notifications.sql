@@ -6,8 +6,12 @@ create table if not exists public.family_notifications (
   title text not null,
   message text not null,
   created_at timestamptz not null default now(),
-  read_at timestamptz
+  read_at timestamptz,
+  related_family_id uuid references public.profiles(id) on delete set null
 );
+
+alter table public.family_notifications
+  add column if not exists related_family_id uuid references public.profiles(id) on delete set null;
 
 create index if not exists family_notifications_family_created_idx
   on public.family_notifications (family_id, created_at desc);
@@ -48,12 +52,6 @@ begin
     case when tg_op = 'INSERT' then 'Documento recibido' else 'Documento actualizado' end,
     new.document_type || case when tg_op = 'INSERT' then ' se agregó' else ' se actualizó' end || ' en tu expediente.'
   );
-  if new.status = 'aprobada' then
-    insert into public.family_notifications (family_id, category, title, message)
-    select p.id, 'sistema', 'Familia lista para evaluación', 'Un expediente fue aceptado por el administrador y está disponible para agendar una cita.'
-    from public.profiles p
-    where p.account_type = 'profesional';
-  end if;
   return new;
 end;
 $$;
@@ -86,6 +84,15 @@ begin
       else 'El administrador revisó tu expediente. Consulta tus documentos para ver qué debes actualizar.'
     end
   );
+  if new.status = 'aprobada' then
+    insert into public.family_notifications (family_id, related_family_id, category, title, message)
+    select professional.id, new.family_id, 'sistema', 'Familia lista para evaluación',
+      'El expediente de ' || family.full_name || ' fue aceptado por el administrador. Puedes agendarle una cita.'
+    from public.profiles professional
+    cross join public.profiles family
+    where professional.account_type = 'profesional'
+      and family.id = new.family_id;
+  end if;
   return new;
 end;
 $$;

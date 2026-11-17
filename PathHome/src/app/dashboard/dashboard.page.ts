@@ -30,6 +30,11 @@ interface DashboardNotification {
   unread: boolean;
 }
 
+interface AssistantMessage {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.page.html',
@@ -39,12 +44,16 @@ interface DashboardNotification {
 })
 export class DashboardPage implements OnDestroy {
   activeSection: DashboardSection = 'inicio';
+  mobileMenuOpen = false;
   dashboardLoading = true;
   private hasLoadedInitialData = false;
   activeFilter: NotificationFilter = 'Todas';
   documentTab: DocumentTab = 'requeridos';
   appointmentTab: AppointmentTab = 'proximas';
-  assistantOpen = false;
+  assistantDraft = '';
+  assistantBusy = false;
+  assistantError = '';
+  assistantMessages: AssistantMessage[] = [];
   notificationsEnabled = true;
   appointmentNotificationsEnabled = true;
   documentNotificationsEnabled = true;
@@ -79,6 +88,7 @@ export class DashboardPage implements OnDestroy {
   private notificationReloadRequested = false;
   private authSubscription: { unsubscribe: () => void } | null = null;
   private lastAuthUserId: string | null = null;
+  private assistantConversationGeneration = 0;
 
   constructor(
     private readonly router: Router,
@@ -95,6 +105,14 @@ export class DashboardPage implements OnDestroy {
       const userId = session?.user.id ?? null;
       if (userId === this.lastAuthUserId) return;
       this.lastAuthUserId = userId;
+      this.activeSection = 'inicio';
+      this.mobileMenuOpen = false;
+      this.assistantConversationGeneration += 1;
+      this.assistantMessages = [];
+      this.assistantDraft = '';
+      this.assistantError = '';
+      this.assistantBusy = false;
+      this.changeDetector.detectChanges();
       window.setTimeout(() => {
         if (!userId) return;
         void this.loadDashboardData();
@@ -120,6 +138,41 @@ export class DashboardPage implements OnDestroy {
     return firstName
       ? firstName.toLocaleLowerCase('es').replace(/^\p{L}/u, (letter) => letter.toLocaleUpperCase('es'))
       : 'Usuario';
+  }
+
+  formatAssistantMessage(text: string): string {
+    const escapeHtml = (value: string): string => value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    const output: string[] = [];
+    let listType: 'ul' | 'ol' | null = null;
+    let listItems: string[] = [];
+    const closeList = (): void => {
+      if (listType && listItems.length) output.push(`<${listType}>${listItems.map((item) => `<li>${item}</li>`).join('')}</${listType}>`);
+      listType = null;
+      listItems = [];
+    };
+    for (const line of text.split(/\r?\n/)) {
+      const safeLine = escapeHtml(line).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      const numbered = safeLine.match(/^\d+[.)]\s+(.+)$/);
+      const bullet = safeLine.match(/^[-*•]\s+(.+)$/);
+      if (numbered || bullet) {
+        const nextType = numbered ? 'ol' : 'ul';
+        if (listType !== nextType) closeList();
+        listType = nextType;
+        listItems.push((numbered ?? bullet)![1]);
+        continue;
+      }
+      closeList();
+      const heading = safeLine.match(/^#{1,3}\s+(.+)$/);
+      if (heading) output.push(`<h3>${heading[1]}</h3>`);
+      else if (safeLine.trim()) output.push(`<p>${safeLine}</p>`);
+    }
+    closeList();
+    return output.join('');
   }
 
   private async loadDashboardData(): Promise<void> {
@@ -342,18 +395,11 @@ export class DashboardPage implements OnDestroy {
         complete: documentsComplete,
       },
       {
-        name: 'Revisión administrativa',
+        name: 'Revisión Institucional',
         status: reviewStatus,
         icon: reviewComplete ? 'checkmark-circle-outline' : 'person-outline',
         current: documentsSent > 0 && !reviewComplete,
         complete: reviewComplete,
-      },
-      {
-        name: 'Entrevista inicial',
-        status: administratorApproved ? 'Pendiente de registro' : administratorRejected ? 'No disponible mientras la revisión esté rechazada' : 'Disponible después de la aprobación',
-        icon: 'chatbubble-ellipses-outline',
-        current: false,
-        complete: false,
       },
       {
         name: 'Evaluación psicológica',
@@ -377,9 +423,9 @@ export class DashboardPage implements OnDestroy {
         complete: false,
       },
       {
-        name: 'Estudio social',
-        status: 'Pendiente de la etapa correspondiente',
-        icon: 'document-text-outline',
+        name: 'Entrevista inicial',
+        status: administratorApproved ? 'Pendiente de registro' : administratorRejected ? 'No disponible mientras la revisión esté rechazada' : 'Disponible después de la aprobación',
+        icon: 'chatbubble-ellipses-outline',
         current: false,
         complete: false,
       },
@@ -402,13 +448,17 @@ export class DashboardPage implements OnDestroy {
 
   showSection(section: DashboardSection): void {
     this.activeSection = section;
+    this.mobileMenuOpen = false;
     if (section === 'datos') {
       this.profileEditName = this.profileName;
       this.profileEditEmail = this.profileEmail;
       this.profileFeedback = '';
     }
-    this.assistantOpen = false;
     if (section === 'notificaciones') void this.loadNotifications();
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen = !this.mobileMenuOpen;
   }
 
   openQuickLink(destination: 'documentos' | 'citas' | 'notificaciones' | 'mas'): void {
@@ -528,11 +578,48 @@ export class DashboardPage implements OnDestroy {
     }
   }
 
-  toggleAssistant(): void {
-    this.assistantOpen = !this.assistantOpen;
+  async askAssistant(question = this.assistantDraft): Promise<void> {
+    const text = question.trim();
+    if (!text || this.assistantBusy) return;
+    const conversationGeneration = this.assistantConversationGeneration;
+    const accountId = this.lastAuthUserId;
+    this.assistantDraft = '';
+    this.assistantError = '';
+    this.assistantMessages = [...this.assistantMessages, { role: 'user', text }];
+    this.assistantBusy = true;
+    try {
+      const previousMessages = this.assistantMessages.slice(-9, -1);
+      const firstUserMessage = previousMessages.findIndex(({ role }) => role === 'user');
+      const history = firstUserMessage < 0 ? [] : previousMessages.slice(firstUserMessage).map(({ role, text: message }) => ({ role, text: message }));
+      const { data, error } = await this.supabase.client.functions.invoke('family-assistant', {
+        body: { message: text, history },
+      });
+      if (conversationGeneration !== this.assistantConversationGeneration || accountId !== this.lastAuthUserId) return;
+      if (error) throw error;
+      if (typeof data?.reply !== 'string' || !data.reply.trim()) throw new Error('No se recibió una respuesta válida.');
+      this.assistantMessages = [...this.assistantMessages, { role: 'assistant', text: data.reply }];
+    } catch (error) {
+      if (conversationGeneration !== this.assistantConversationGeneration || accountId !== this.lastAuthUserId) return;
+      let errorMessage = error instanceof Error ? error.message : 'No se pudo conectar con el asistente. Inténtalo de nuevo.';
+      const response = error && typeof error === 'object' && 'context' in error ? error.context : null;
+      if (response && typeof response === 'object' && 'clone' in response && typeof response.clone === 'function') {
+        const payload = await (response.clone() as Response).json().catch(() => null) as { error?: unknown } | null;
+        if (typeof payload?.error === 'string') errorMessage = payload.error;
+      }
+      this.assistantError = errorMessage.includes('Edge Function returned a non-2xx status code')
+        ? 'El asistente no pudo responder ahora. Espera unos segundos e inténtalo de nuevo.'
+        : errorMessage;
+    } finally {
+      if (conversationGeneration === this.assistantConversationGeneration && accountId === this.lastAuthUserId) {
+        this.assistantBusy = false;
+        this.changeDetector.detectChanges();
+      }
+    }
   }
 
   async signOut(): Promise<void> {
+    this.activeSection = 'inicio';
+    this.mobileMenuOpen = false;
     await this.supabase.client.auth.signOut();
     await this.router.navigateByUrl('/login');
   }
