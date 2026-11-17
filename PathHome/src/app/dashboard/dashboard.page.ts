@@ -6,7 +6,7 @@ import { AlertController, IonContent, IonIcon } from '@ionic/angular';
 import { FormsModule } from '@angular/forms';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { SupabaseService } from '../core/supabase/supabase.service';
-import type { FamilyAppointment, FamilyNotification } from '../core/supabase/supabase.service';
+import type { FamilyAppointment, FamilyNotification, FamilyOutcome } from '../core/supabase/supabase.service';
 import { addIcons } from 'ionicons';
 import {
   calendarOutline, checkmarkCircleOutline, chatbubbleEllipsesOutline, documentTextOutline,
@@ -59,6 +59,7 @@ export class DashboardPage implements OnDestroy {
   documentNotificationsEnabled = true;
   uploadedDocuments: import('../core/supabase/supabase.service').FamilyDocument[] = [];
   familyApprovalStatus: 'pendiente' | 'aprobada' | 'rechazada' | null = null;
+  familyOutcome: FamilyOutcome | null = null;
   readonly requiredDocuments = [
     { name: 'Cédula de identidad', description: 'Documento obligatorio' },
     { name: 'Certificado de antecedentes penales', description: 'Documento obligatorio' },
@@ -88,6 +89,7 @@ export class DashboardPage implements OnDestroy {
   private notificationReloadRequested = false;
   private authSubscription: { unsubscribe: () => void } | null = null;
   private lastAuthUserId: string | null = null;
+  private accountGeneration = 0;
   private assistantConversationGeneration = 0;
 
   constructor(
@@ -105,6 +107,35 @@ export class DashboardPage implements OnDestroy {
       const userId = session?.user.id ?? null;
       if (userId === this.lastAuthUserId) return;
       this.lastAuthUserId = userId;
+      this.accountGeneration += 1;
+      this.hasLoadedInitialData = false;
+      this.dashboardLoading = !!userId;
+      this.uploadedDocuments = [];
+      this.familyApprovalStatus = null;
+      this.familyOutcome = null;
+      this.familyAppointments = [];
+      this.familyNotifications = [];
+      this.notificationsLoading = false;
+      this.notificationError = '';
+      this.notificationLoadPromise = null;
+      this.notificationReloadRequested = false;
+      this.profileName = '';
+      this.profileEmail = '';
+      this.profilePhotoUrl = '';
+      this.profileEditName = '';
+      this.profileEditEmail = '';
+      this.profileRole = 'Familia solicitante';
+      this.localNotice = '';
+      this.activeFilter = 'Todas';
+      this.documentTab = 'requeridos';
+      this.appointmentTab = 'proximas';
+      this.documentBusy = false;
+      this.profileSaving = false;
+      this.profilePhotoSaving = false;
+      if (this.familyNotificationChannel) {
+        void this.supabase.client.removeChannel(this.familyNotificationChannel);
+        this.familyNotificationChannel = null;
+      }
       this.activeSection = 'inicio';
       this.mobileMenuOpen = false;
       this.assistantConversationGeneration += 1;
@@ -176,31 +207,37 @@ export class DashboardPage implements OnDestroy {
   }
 
   private async loadDashboardData(): Promise<void> {
+    const generation = this.accountGeneration;
     if (!this.hasLoadedInitialData) this.dashboardLoading = true;
     const pendingLoads = Promise.all([
       this.loadProfile(),
       this.loadDocuments(),
       this.loadAppointments(),
       this.loadFamilyApprovalStatus(),
+      this.loadFamilyOutcome(),
     ]).catch(() => undefined).finally(() => this.changeDetector.detectChanges());
     try {
       if (!this.hasLoadedInitialData) {
         await Promise.race([pendingLoads, new Promise<void>((resolve) => setTimeout(resolve, 1600))]);
       }
     } finally {
-      this.hasLoadedInitialData = true;
-      this.dashboardLoading = false;
-      this.changeDetector.detectChanges();
+      if (generation === this.accountGeneration) {
+        this.hasLoadedInitialData = true;
+        this.dashboardLoading = false;
+        this.changeDetector.detectChanges();
+      }
     }
   }
 
   private async loadProfile(): Promise<void> {
+    const generation = this.accountGeneration;
     let user: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null = null;
     try {
       const { data, error } = await this.supabase.client.auth.getSession();
       if (!error) user = data.session?.user ?? null;
     } catch { /* Fall back to the neutral account label if auth is temporarily unavailable. */ }
-    if (!user) {
+    if (generation !== this.accountGeneration) return;
+    if (!user || user.id !== this.lastAuthUserId) {
       this.profileName = 'Usuario';
       this.profileEmail = '';
       return;
@@ -227,6 +264,7 @@ export class DashboardPage implements OnDestroy {
 
     try {
       const { data: profile, error } = await this.supabase.client.from('profiles').select('full_name, account_type').eq('id', user.id).maybeSingle();
+      if (generation !== this.accountGeneration) return;
       if (!error && profile) {
         this.profileName = profile.full_name?.trim() || this.profileName;
         this.profileEditName = this.profileName;
@@ -237,11 +275,13 @@ export class DashboardPage implements OnDestroy {
 
     try {
       const { data: profilePhoto, error } = await this.supabase.client.from('profiles').select('avatar_path').eq('id', user.id).maybeSingle();
+      if (generation !== this.accountGeneration) return;
       if (!error && profilePhoto?.avatar_path) {
-        this.profilePhotoUrl = await this.supabase.getMyFamilyProfilePhotoUrl(profilePhoto.avatar_path);
+        const photoUrl = await this.supabase.getMyFamilyProfilePhotoUrl(profilePhoto.avatar_path);
+        if (generation === this.accountGeneration) this.profilePhotoUrl = photoUrl;
       } else if (!error) this.profilePhotoUrl = '';
     } catch { /* La foto queda opcional si no se ha configurado su almacenamiento. */ }
-    this.changeDetector.detectChanges();
+    if (generation === this.accountGeneration) this.changeDetector.detectChanges();
   }
 
   get visibleNotifications(): DashboardNotification[] {
@@ -274,30 +314,36 @@ export class DashboardPage implements OnDestroy {
   }
 
   private loadNotifications(): Promise<void> {
+    const generation = this.accountGeneration;
     if (this.notificationLoadPromise) {
       this.notificationReloadRequested = true;
       return this.notificationLoadPromise;
     }
     this.notificationsLoading = true;
-    this.notificationLoadPromise = this.supabase.listMyFamilyNotifications()
+    const loadPromise = this.supabase.listMyFamilyNotifications()
       .then((notifications) => {
+        if (generation !== this.accountGeneration) return;
         this.familyNotifications = notifications;
         this.notificationError = '';
       })
       .catch(() => {
+        if (generation !== this.accountGeneration) return;
         this.familyNotifications = [];
         this.notificationError = 'No se pudieron cargar las notificaciones. Verifica que el módulo esté configurado.';
       })
       .finally(() => {
-        this.notificationsLoading = false;
-        this.notificationLoadPromise = null;
-        this.changeDetector.detectChanges();
+        if (generation === this.accountGeneration && this.notificationLoadPromise === loadPromise) {
+          this.notificationsLoading = false;
+          this.notificationLoadPromise = null;
+          this.changeDetector.detectChanges();
+        }
         if (this.notificationReloadRequested) {
           this.notificationReloadRequested = false;
           void this.loadNotifications();
         }
       });
-    return this.notificationLoadPromise;
+    this.notificationLoadPromise = loadPromise;
+    return loadPromise;
   }
 
   private async subscribeToFamilyNotifications(): Promise<void> {
@@ -305,11 +351,13 @@ export class DashboardPage implements OnDestroy {
     try {
       const { data, error } = await this.supabase.client.auth.getSession();
       const familyId = data.session?.user.id;
-      if (error || !familyId) return;
+      if (error || !familyId || familyId !== this.lastAuthUserId) return;
       this.familyNotificationChannel = this.supabase.client
         .channel(`family-notifications-${familyId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'family_notifications', filter: `family_id=eq.${familyId}` }, () => {
           void this.loadNotifications();
+          void this.loadFamilyOutcome();
+          void this.loadAppointments();
         })
         .subscribe();
     } catch { /* Notifications still refresh whenever the section is opened. */ }
@@ -355,23 +403,35 @@ export class DashboardPage implements OnDestroy {
     return Math.round((this.uploadedRequiredDocumentCount / this.requiredDocuments.length) * 100);
   }
 
+  get upcomingFamilyAppointments(): FamilyAppointment[] {
+    return this.familyAppointments.filter((appointment) => !appointment.attended_at);
+  }
+
+  get completedFamilyAppointments(): FamilyAppointment[] {
+    return this.familyAppointments.filter((appointment) => !!appointment.attended_at);
+  }
+
   get processStatus(): string {
-    if (this.familyApprovalStatus === 'aprobada') return 'Familia aceptada por el administrador';
+    if (this.familyOutcome?.status === 'aceptada') return 'Apta para acceder al catálogo';
+    if (this.familyOutcome?.status === 'rechazada') return 'La institución solicita una nueva evaluación';
+    if (this.familyApprovalStatus === 'aprobada') return 'Familia aceptada por la institución';
     if (this.familyApprovalStatus === 'rechazada') return 'La documentación requiere atención';
     if (this.documentProgress === 100) return 'Documentación enviada · pendiente de revisión';
     if (this.uploadedRequiredDocumentCount === 0) return 'Documentos pendientes';
     return `${this.uploadedRequiredDocumentCount} de ${this.requiredDocuments.length} documentos enviados`;
   }
 
-  get stages(): { name: string; status: string; icon: string; current: boolean; complete: boolean }[] {
+  get stages(): { name: string; status: string; icon: string; current: boolean; complete: boolean; rejected?: boolean }[] {
     const documentsComplete = this.documentProgress === 100;
     const documentsSent = this.uploadedRequiredDocumentCount;
     const reviewComplete = this.familyApprovalStatus === 'aprobada' || this.familyApprovalStatus === 'rechazada';
     const administratorApproved = this.familyApprovalStatus === 'aprobada';
     const administratorRejected = this.familyApprovalStatus === 'rechazada';
-    const appointment = this.familyAppointments[0];
+    const appointment = this.upcomingFamilyAppointments[0];
     const appointmentStatus = appointment
       ? `Cita agendada: ${this.appointmentDate(appointment.appointment_date)} · ${appointment.appointment_time}`
+      : this.completedFamilyAppointments.length
+        ? 'Cita realizada · informe enviado o en preparación'
       : administratorApproved
         ? 'Pendiente de agendar'
         : administratorRejected
@@ -404,23 +464,25 @@ export class DashboardPage implements OnDestroy {
       {
         name: 'Evaluación psicológica',
         status: appointmentStatus,
-        icon: appointment ? 'calendar-outline' : 'person-outline',
-        current: administratorApproved && Boolean(appointment),
-        complete: false,
+        icon: this.completedFamilyAppointments.length ? 'checkmark-circle-outline' : appointment ? 'calendar-outline' : 'person-outline',
+        current: administratorApproved && Boolean(appointment) && this.completedFamilyAppointments.length === 0,
+        complete: this.completedFamilyAppointments.length > 0,
       },
       {
         name: 'Resultado de aptitud',
-        status: administratorApproved ? 'Pendiente del resultado del psicólogo' : administratorRejected ? 'No disponible mientras la revisión esté rechazada' : 'Disponible después de la aprobación',
-        icon: 'help-circle-outline',
-        current: false,
-        complete: false,
+        status: this.familyOutcome?.status === 'aceptada' ? 'Aceptada por la institución · acceso al catálogo habilitado' : this.familyOutcome?.status === 'rechazada' ? `La institución solicita una nueva evaluación${this.familyOutcome.reason ? ': ' + this.familyOutcome.reason : ''}` : this.familyOutcome?.status === 'pendiente' ? 'Informe psicológico enviado · pendiente de decisión institucional' : administratorApproved ? 'Pendiente de evaluación psicológica' : administratorRejected ? 'No disponible mientras la revisión esté rechazada' : 'Disponible después de la aprobación',
+        icon: this.familyOutcome?.status === 'aceptada' ? 'checkmark-circle-outline' : this.familyOutcome?.status === 'rechazada' ? 'close-circle-outline' : 'help-circle-outline',
+        current: this.familyOutcome?.status === 'pendiente',
+        complete: this.familyOutcome?.status === 'aceptada',
+        rejected: this.familyOutcome?.status === 'rechazada',
       },
       {
         name: 'Catálogo de niños',
-        status: 'Se habilita si el resultado psicológico es favorable',
-        icon: 'home-outline',
+        status: this.familyOutcome?.status === 'aceptada' ? 'Acceso habilitado' : this.familyOutcome?.status === 'rechazada' ? 'Aún no habilitado · se puede realizar otra evaluación' : 'Se habilita si la institución acepta el informe',
+        icon: this.familyOutcome?.status === 'aceptada' ? 'checkmark-circle-outline' : this.familyOutcome?.status === 'rechazada' ? 'close-circle-outline' : 'home-outline',
         current: false,
-        complete: false,
+        complete: this.familyOutcome?.status === 'aceptada',
+        rejected: this.familyOutcome?.status === 'rechazada',
       },
       {
         name: 'Entrevista inicial',
@@ -445,6 +507,8 @@ export class DashboardPage implements OnDestroy {
     if (this.activeSection === 'notificaciones') return 'notificaciones';
     return this.activeSection === 'proceso' ? 'proceso' : this.activeSection === 'perfil' ? 'perfil' : 'inicio';
   }
+
+  openCatalog(): void { void this.router.navigateByUrl('/catalogo'); }
 
   showSection(section: DashboardSection): void {
     this.activeSection = section;
@@ -500,21 +564,31 @@ export class DashboardPage implements OnDestroy {
   }
 
   private async loadDocuments(): Promise<void> {
-    try { this.uploadedDocuments = await this.supabase.listMyFamilyDocuments(); }
+    const generation = this.accountGeneration;
+    try { const documents = await this.supabase.listMyFamilyDocuments(); if (generation === this.accountGeneration) this.uploadedDocuments = documents; }
     catch { /* The migration may not be installed yet. */ }
-    finally { this.changeDetector.detectChanges(); }
+    finally { if (generation === this.accountGeneration) this.changeDetector.detectChanges(); }
   }
 
   private async loadAppointments(): Promise<void> {
-    try { this.familyAppointments = await this.supabase.listMyFamilyAppointments(); }
+    const generation = this.accountGeneration;
+    try { const appointments = await this.supabase.listMyFamilyAppointments(); if (generation === this.accountGeneration) this.familyAppointments = appointments; }
     catch { /* The migration may not be installed yet. */ }
-    finally { this.changeDetector.detectChanges(); }
+    finally { if (generation === this.accountGeneration) this.changeDetector.detectChanges(); }
   }
 
   private async loadFamilyApprovalStatus(): Promise<void> {
-    try { this.familyApprovalStatus = await this.supabase.getMyFamilyApprovalStatus(); }
+    const generation = this.accountGeneration;
+    try { const status = await this.supabase.getMyFamilyApprovalStatus(); if (generation === this.accountGeneration) this.familyApprovalStatus = status; }
     catch { /* The family case may not exist yet. */ }
-    finally { this.changeDetector.detectChanges(); }
+    finally { if (generation === this.accountGeneration) this.changeDetector.detectChanges(); }
+  }
+
+  private async loadFamilyOutcome(): Promise<void> {
+    const generation = this.accountGeneration;
+    try { const outcome = await this.supabase.getMyFamilyOutcome(); if (generation === this.accountGeneration) this.familyOutcome = outcome; }
+    catch { /* Los resultados se habilitan al aplicar la migración de informes. */ }
+    finally { if (generation === this.accountGeneration) this.changeDetector.detectChanges(); }
   }
 
   appointmentDate(value: string): string {

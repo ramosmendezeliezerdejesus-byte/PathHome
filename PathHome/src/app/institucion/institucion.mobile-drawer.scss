@@ -1,0 +1,12 @@
+@media(max-width:900px){
+  :host .institution-sidebar{position:fixed;top:0;right:auto;bottom:0;left:0;z-index:41;display:flex;flex-direction:column;width:min(280px,84vw);height:100dvh;padding:26px 17px max(18px,env(safe-area-inset-bottom));border:0;border-right:1px solid #eeedf4;border-radius:0 18px 18px 0;background:#fff;box-shadow:12px 0 34px #39334c20;transform:translateX(-110%);transition:transform .22s ease;overflow-y:auto}
+  :host .institution-sidebar.mobile-open{transform:translateX(0)}
+  :host .institution-sidebar .brand{flex:none;justify-content:flex-start;gap:9px;min-width:0;margin:0 4px 28px;color:#4e557c;font-size:25px;white-space:nowrap}
+  :host .institution-sidebar .brand-logo{width:43px;height:43px}
+  :host .institution-sidebar nav{display:grid;flex:none;width:100%;height:auto;grid-template-columns:minmax(0,1fr);gap:7px;overflow:visible}
+  :host .institution-sidebar nav button{justify-content:flex-start;width:100%;min-width:0;min-height:48px;padding:0 13px;border-radius:14px;font-size:13px;text-align:left;white-space:nowrap}
+  :host .institution-sidebar nav button ion-icon{width:23px;height:23px}
+  :host .sidebar-sign-out{flex:none;min-height:46px;margin-top:auto;padding:0 13px}
+  :host .institution-main{grid-column:1;grid-row:2;min-height:0}
+  :host .institution-mobile-nav{display:none}
+}

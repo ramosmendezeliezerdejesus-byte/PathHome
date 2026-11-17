@@ -183,24 +183,6 @@ export class AdminPage {
     }
   }
 
-  async reviewFamily(family: FamilyCase, status: 'aprobada' | 'rechazada'): Promise<void> {
-    try {
-      await this.supabase.setFamilyApproval(family.family_id, status);
-      this.notice = status === 'aprobada' ? `Familia aprobada. ${family.full_name} ya aparecerá al psicólogo para agendar una cita.` : 'Expediente familiar rechazado.';
-      this.selectedFamily = { ...family, status, approved_at: new Date().toISOString() };
-      await this.loadFamilyCases();
-    } catch (error) { this.error = error instanceof Error ? error.message : 'No se pudo actualizar el expediente.'; }
-  }
-
-  async removeFamilyApproval(family: FamilyCase): Promise<void> {
-    try {
-      await this.supabase.removeFamilyApproval(family.family_id);
-      this.notice = `Se retiró la aprobación de ${family.full_name}.`;
-      this.selectedFamily = { ...family, status: 'pendiente', approved_at: null };
-      await this.loadFamilyCases();
-    } catch (error) { this.error = error instanceof Error ? error.message : 'No se pudo retirar la aprobación.'; }
-  }
-
   async openFamilyDocument(path: string): Promise<void> {
     try {
       this.familyDocumentUrl = await this.supabase.getFamilyDocumentUrl(path);

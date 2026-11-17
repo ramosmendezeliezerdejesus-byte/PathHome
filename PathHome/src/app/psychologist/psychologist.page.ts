@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { IonContent } from '@ionic/angular';
-import { FamilyCase, FamilyNotification, SupabaseService } from '../core/supabase/supabase.service';
+import { FamilyCase, FamilyNotification, FamilyPsychReport, SupabaseService } from '../core/supabase/supabase.service';
 
 type PsychologistSection = 'inicio' | 'expedientes' | 'evaluaciones' | 'citas' | 'informes' | 'notificaciones' | 'perfil';
 type RecordStatus = 'Pendiente' | 'En progreso' | 'Completada';
@@ -20,10 +20,6 @@ interface PsychologistCase {
 interface Evaluation {
   id: number; caseId: string; caseName: string; title: string; status: RecordStatus;
   updated: string; observations: string; results: string; recommendations: string;
-}
-
-interface Report {
-  id: number; caseId: string; title: string; conclusions: string; recommendations: string; created: string;
 }
 
 interface CalendarDay { key: string; day: number; inMonth: boolean; }
@@ -67,7 +63,6 @@ export class PsychologistPage implements OnDestroy {
   mobileMenuOpen = false;
   notificationsEnabled = true;
   nextEvaluationId = 3;
-  nextReportId = 1;
   appointmentFeedback = '';
   evaluationFeedback = '';
   reportFeedback = '';
@@ -78,6 +73,12 @@ export class PsychologistPage implements OnDestroy {
   selectedPsychologistFamily: FamilyCase | null = null;
   approvedFamilies: FamilyCase[] = [];
   psychologistAppointments: import('../core/supabase/supabase.service').FamilyAppointment[] = [];
+  familyPsychReports: FamilyPsychReport[] = [];
+  reportAppointmentId: string | null = null;
+  editingReportId: string | null = null;
+  deletingReportId: string | null = null;
+  reportSaving = false;
+  readonly familyReportDraft = { observations: '', strengths: '', concerns: '', recommendation: '' };
   editingAppointmentId: string | null = null;
   familyAppointmentDraft = { familyId: '', date: '', time: '', note: '' };
   calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -132,7 +133,6 @@ export class PsychologistPage implements OnDestroy {
   notifications: NotificationItem[] = [];
 
   readonly evaluationDraft = { caseId: '2025-0147', status: 'En progreso' as RecordStatus, observations: '', results: '', recommendations: '' };
-  readonly reportDraft = { caseId: '2025-0147', title: '', conclusions: '', recommendations: '' };
 
   profile = {
     name: 'Usuario', email: '', phone: '', specialty: 'Psicóloga especializada',
@@ -171,6 +171,7 @@ export class PsychologistPage implements OnDestroy {
       this.loadProfile(),
       this.loadApprovedFamilies(),
       this.loadPsychologistAppointments(),
+      this.loadPsychologistReports(),
       this.loadNotifications(),
     ]).then(() => undefined).finally(() => {
       this.changeDetector.detectChanges();
@@ -194,6 +195,12 @@ export class PsychologistPage implements OnDestroy {
   private async loadPsychologistAppointments(): Promise<void> {
     try { this.psychologistAppointments = await this.supabase.listPsychologistFamilyAppointments(); }
     catch { /* La migración de citas debe estar aplicada. */ }
+    finally { this.changeDetector.detectChanges(); }
+  }
+
+  private async loadPsychologistReports(): Promise<void> {
+    try { this.familyPsychReports = await this.supabase.listPsychologistReports(); }
+    catch { /* La migración de informes puede no estar instalada aún. */ }
     finally { this.changeDetector.detectChanges(); }
   }
 
@@ -321,6 +328,109 @@ export class PsychologistPage implements OnDestroy {
     } catch (error) { this.appointmentFeedback = error instanceof Error ? error.message : 'No se pudo agendar la cita.'; }
   }
 
+  async confirmFamilyArrival(appointment: import('../core/supabase/supabase.service').FamilyAppointment): Promise<void> {
+    try {
+      await this.supabase.markFamilyAppointmentAttended(appointment.id);
+      await this.loadPsychologistAppointments();
+      this.reportAppointmentId = appointment.id;
+      this.familyReportDraft.observations = '';
+      this.familyReportDraft.strengths = '';
+      this.familyReportDraft.concerns = '';
+      this.familyReportDraft.recommendation = '';
+      this.showSection('informes');
+      this.reportFeedback = `Asistencia de ${appointment.family_name ?? 'la familia'} confirmada. Completa el informe para enviarlo a la institución.`;
+    } catch (error) {
+      this.appointmentFeedback = error instanceof Error ? error.message : 'No se pudo confirmar la asistencia.';
+    } finally { this.changeDetector.detectChanges(); }
+  }
+
+  get reportAppointment(): import('../core/supabase/supabase.service').FamilyAppointment | null {
+    const appointment = this.psychologistAppointments.find((item) => item.id === this.reportAppointmentId);
+    if (appointment) return appointment;
+    const report = this.familyPsychReports.find((item) => item.appointment_id === this.reportAppointmentId);
+    return report ? {
+      id: report.appointment_id,
+      family_id: report.family_id,
+      psychologist_id: report.psychologist_id,
+      title: 'Evaluación psicológica',
+      appointment_date: report.appointment_date,
+      appointment_time: report.appointment_time,
+      note: null,
+      created_at: report.created_at,
+      family_name: report.family_name,
+      attended_at: null,
+    } : null;
+  }
+
+  hasReportForAppointment(appointmentId: string): boolean {
+    return this.familyPsychReports.some((report) => report.appointment_id === appointmentId);
+  }
+
+  async submitFamilyPsychReport(): Promise<void> {
+    if (!this.reportAppointmentId) return;
+    this.reportSaving = true;
+    this.reportFeedback = '';
+    try {
+      if (this.editingReportId) {
+        await this.supabase.updatePsychologistFamilyReport(this.editingReportId, this.familyReportDraft);
+        this.reportFeedback = 'Informe actualizado y enviado nuevamente a la institución para su revisión.';
+      } else {
+        await this.supabase.saveFamilyPsychReport({ appointmentId: this.reportAppointmentId, ...this.familyReportDraft });
+        this.reportFeedback = 'Informe enviado a las instituciones para su decisión.';
+      }
+      this.reportAppointmentId = null;
+      this.editingReportId = null;
+      this.familyReportDraft.observations = '';
+      this.familyReportDraft.strengths = '';
+      this.familyReportDraft.concerns = '';
+      this.familyReportDraft.recommendation = '';
+      await this.loadPsychologistReports();
+      await this.loadPsychologistAppointments();
+    } catch (error) { this.reportFeedback = error instanceof Error ? error.message : 'No se pudo enviar el informe.'; }
+    finally { this.reportSaving = false; this.changeDetector.detectChanges(); }
+  }
+
+  editFamilyPsychReport(report: FamilyPsychReport): void {
+    if (report.status !== 'pendiente') {
+      this.reportFeedback = 'Este informe ya fue revisado por la institución y no se puede editar.';
+      this.changeDetector.detectChanges();
+      return;
+    }
+    this.editingReportId = report.id;
+    this.reportAppointmentId = report.appointment_id;
+    this.familyReportDraft.observations = report.observations;
+    this.familyReportDraft.strengths = report.strengths;
+    this.familyReportDraft.concerns = report.concerns;
+    this.familyReportDraft.recommendation = report.recommendation;
+    this.reportFeedback = 'Editando este informe. Al guardar, la institución tendrá que revisar la versión actualizada.';
+    this.activeSection = 'informes';
+    this.mobileMenuOpen = false;
+  }
+
+  cancelReportEdit(): void {
+    this.editingReportId = null;
+    this.reportAppointmentId = null;
+    this.familyReportDraft.observations = '';
+    this.familyReportDraft.strengths = '';
+    this.familyReportDraft.concerns = '';
+    this.familyReportDraft.recommendation = '';
+    this.reportFeedback = '';
+  }
+
+  async deleteFamilyPsychReport(report: FamilyPsychReport): Promise<void> {
+    const confirmed = window.confirm(`¿Eliminar el informe de ${report.family_name}? La institución ya no podrá revisarlo.`);
+    if (!confirmed) return;
+    this.deletingReportId = report.id;
+    this.reportFeedback = '';
+    try {
+      await this.supabase.deletePsychologistFamilyReport(report.id);
+      if (this.editingReportId === report.id) this.cancelReportEdit();
+      this.reportFeedback = 'Informe eliminado. El resultado de la familia queda pendiente hasta que envíes otro informe.';
+      await this.loadPsychologistReports();
+    } catch (error) { this.reportFeedback = error instanceof Error ? error.message : 'No se pudo eliminar el informe.'; }
+    finally { this.deletingReportId = null; this.changeDetector.detectChanges(); }
+  }
+
   editFamilyAppointment(appointment: import('../core/supabase/supabase.service').FamilyAppointment): void {
     this.editingAppointmentId = appointment.id;
     this.familyAppointmentDraft = {
@@ -411,6 +521,7 @@ export class PsychologistPage implements OnDestroy {
     this.activeSection = section;
     this.mobileMenuOpen = false;
     if (section === 'notificaciones') void this.loadNotifications();
+    if (section === 'informes') { void this.loadPsychologistReports(); void this.loadPsychologistAppointments(); }
     if (section !== 'expedientes') this.selectedPsychologistFamily = null;
     this.selectedCase = null;
     this.appointmentFeedback = '';
@@ -454,24 +565,6 @@ export class PsychologistPage implements OnDestroy {
     this.evaluationDraft.recommendations = '';
   }
 
-  saveReport(): void {
-    if (!this.reportDraft.title.trim() || !this.reportDraft.conclusions.trim() || !this.reportDraft.recommendations.trim()) {
-      this.reportFeedback = 'Completa el título, las conclusiones y las recomendaciones para guardar el informe de demostración.';
-      return;
-    }
-    this.reports.unshift({
-      id: this.nextReportId++, caseId: this.reportDraft.caseId, title: this.reportDraft.title,
-      conclusions: this.reportDraft.conclusions, recommendations: this.reportDraft.recommendations,
-      created: new Date().toLocaleDateString('es'),
-    });
-    this.reportFeedback = 'Informe agregado solo a esta vista demostrativa.';
-    this.reportDraft.title = '';
-    this.reportDraft.conclusions = '';
-    this.reportDraft.recommendations = '';
-  }
-
-  readonly reports: Report[] = [];
-
   async toggleNotification(id: string): Promise<void> {
     const item = this.notifications.find((notification) => notification.id === id);
     if (!item || item.read) return;
@@ -482,7 +575,9 @@ export class PsychologistPage implements OnDestroy {
 
   async openNotification(notification: NotificationItem): Promise<void> {
     await this.toggleNotification(notification.id);
-    if (notification.title !== 'Familia lista para evaluación' || !notification.relatedFamilyId) return;
+    const scheduleFromReview = notification.title === 'Familia lista para evaluación'
+      || notification.title === 'Familia no aceptada para el catálogo';
+    if (!scheduleFromReview || !notification.relatedFamilyId) return;
 
     if (!this.approvedFamilies.some((family) => family.family_id === notification.relatedFamilyId)) {
       await this.loadApprovedFamilies();
@@ -496,6 +591,9 @@ export class PsychologistPage implements OnDestroy {
 
     this.showSection('citas');
     this.familyAppointmentDraft.familyId = family.family_id;
+    if (notification.title === 'Familia no aceptada para el catálogo') {
+      this.appointmentFeedback = 'La institución dejó indicaciones para seguimiento. Puedes programar una nueva cita con esta familia.';
+    }
     window.setTimeout(() => {
       const form = document.getElementById('appointment-form');
       form?.scrollIntoView({ behavior: 'smooth', block: 'start' });

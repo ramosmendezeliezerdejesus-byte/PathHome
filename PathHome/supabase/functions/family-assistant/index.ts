@@ -54,15 +54,17 @@ Deno.serve(async (request: Request) => {
     const message = typeof body?.message === 'string' ? body.message.trim().slice(0, 1000) : '';
     if (!message) return json({ error: 'Escribe una pregunta para continuar.' }, 400);
 
-    const [{ data: profile }, { data: documents }, { data: caseData }, { data: appointments }] = await Promise.all([
+    const [{ data: profile }, { data: documents }, { data: caseData }, { data: appointments }, { data: latestReportOutcome }] = await Promise.all([
       supabase.from('profiles').select('account_type').eq('id', authData.user.id).maybeSingle(),
       supabase.from('family_documents').select('document_type, created_at').eq('family_id', authData.user.id).order('created_at', { ascending: false }).limit(30),
       supabase.from('family_cases').select('status').eq('family_id', authData.user.id).maybeSingle(),
-      supabase.from('family_appointments').select('title, appointment_date, appointment_time').eq('family_id', authData.user.id).order('appointment_date', { ascending: true }).limit(5),
+      supabase.from('family_appointments').select('title, appointment_date, appointment_time, attended_at').eq('family_id', authData.user.id).order('appointment_date', { ascending: true }).limit(10),
+      supabase.rpc('family_latest_report_outcome'),
     ]);
     if (profile?.account_type !== 'familia') return json({ error: 'Este asistente está disponible para cuentas familiares.' }, 403);
 
     const uploadedNames = new Set((documents ?? []).map((document) => document.document_type.trim().toLocaleLowerCase('es')));
+    const reportOutcome = Array.isArray(latestReportOutcome) ? latestReportOutcome[0] ?? null : null;
     const familyContext = {
       documentos_requeridos: requiredDocuments.map((document) => ({
         ...document,
@@ -70,7 +72,26 @@ Deno.serve(async (request: Request) => {
       })),
       aclaracion_documentos: 'Estos documentos forman parte de la evaluación del proceso de adopción. Entregarlos no garantiza la aprobación de la solicitud; cada documento será revisado por el personal correspondiente y tratado de manera confidencial.',
       estado_expediente: caseData?.status ?? 'sin expediente creado',
-      proximas_citas: appointments ?? [],
+      citas_realizadas: (appointments ?? []).filter((appointment) => Boolean(appointment.attended_at)).map((appointment) => ({
+        titulo: appointment.title,
+        fecha: appointment.appointment_date,
+        asistencia_confirmada: true,
+      })),
+      proximas_citas: (appointments ?? []).filter((appointment) => !appointment.attended_at).map((appointment) => ({
+        titulo: appointment.title,
+        fecha: appointment.appointment_date,
+        hora: appointment.appointment_time,
+      })),
+      evaluacion_psicologica: {
+        estado: reportOutcome?.status ?? ((appointments ?? []).some((appointment) => Boolean(appointment.attended_at)) ? 'informe_en_preparacion' : 'pendiente'),
+        resultado: reportOutcome?.status === 'aceptada' ? 'apta_para_catalogo' : reportOutcome?.status === 'rechazada' ? 'requiere_nueva_evaluacion' : reportOutcome?.status === 'pendiente' ? 'pendiente_de_decision_institucional' : 'sin_resultado',
+        motivo_institucional: reportOutcome?.reason ?? null,
+        fecha_decision: reportOutcome?.decided_at ?? null,
+      },
+      acceso_catalogo: {
+        habilitado: reportOutcome?.status === 'aceptada',
+        estado: reportOutcome?.status === 'aceptada' ? 'habilitado' : reportOutcome?.status === 'rechazada' ? 'no_habilitado' : 'pendiente',
+      },
     };
 
     const rawHistory = Array.isArray(body?.history)
@@ -99,7 +120,7 @@ Deno.serve(async (request: Request) => {
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiApiKey },
         signal: AbortSignal.timeout(20_000),
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: `Eres el asistente informativo de PathHome y respondes en español claro, amable y breve. Ayudas a las familias a entender los documentos, el estado y los próximos pasos. Usa exclusivamente los requisitos, motivos y datos proporcionados en el contexto; nunca inventes documentos, reglas, plazos, aprobaciones ni razones legales. Si preguntan por qué se solicita un documento, explica su motivo usando el contexto y sin presentarlo como garantía ni criterio definitivo de aprobación. Recuerda que estos documentos forman parte de la evaluación del proceso de adopción: entregarlos no garantiza la aprobación; el personal correspondiente revisa cada documento y los trata de manera confidencial. Puedes indicar cuáles aparecen enviados o pendientes según el contexto. No tomes decisiones ni solicites contraseñas, datos financieros, números de identidad ni copias de documentos en el chat. Si la información no basta, reconoce el límite y recomienda contactar a la institución. El contexto familiar es privado y solo debe usarse para contestar a esta familia: ${JSON.stringify(familyContext)}` }] },
+          systemInstruction: { parts: [{ text: `Eres el asistente informativo de PathHome y respondes en español claro, amable y breve. Ayudas a las familias a entender sus documentos, citas y etapas del proceso, incluidas la evaluación psicológica y la decisión institucional sobre el acceso al catálogo. Usa exclusivamente los datos proporcionados en el contexto; nunca inventes estados, decisiones, motivos, reglas ni plazos. Si preguntan por el resultado, explica si la institución aceptó o rechazó el informe y comunica únicamente el motivo institucional registrado. El catálogo está habilitado solamente cuando el resultado dice aceptada; una decisión rechazada significa que no hay acceso y puede requerirse una nueva evaluación. Si no hay resultado, dilo claramente y no infieras aceptación o rechazo. Distingue las citas futuras de las citas cuya asistencia ya fue confirmada. La institución toma la decisión de aptitud a partir del informe profesional; tú no tomas decisiones. Trata documentos y datos del proceso como confidenciales. No solicites contraseñas, datos financieros, números de identidad ni copias de documentos por el chat. Si la información no basta, reconoce el límite y recomienda contactar a la institución. El contexto familiar es privado y solo debe usarse para contestar a esta familia: ${JSON.stringify(familyContext)}` }] },
           contents: history,
           generationConfig: { maxOutputTokens: 500, temperature: 0.3 },
         }),

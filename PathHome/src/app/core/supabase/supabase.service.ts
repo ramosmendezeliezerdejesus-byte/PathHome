@@ -38,12 +38,33 @@ export interface FamilyCase {
 export interface FamilyAppointment {
   id: string; family_id: string; psychologist_id: string; title: string; appointment_date: string; appointment_time: string; note: string | null; created_at: string;
   family_name?: string;
+  attended_at?: string | null;
+}
+export interface FamilyPsychReport {
+  id: string; appointment_id: string; family_id: string; psychologist_id: string; family_name: string;
+  appointment_date: string; appointment_time: string; observations: string; strengths: string; concerns: string;
+  recommendation: string; status: 'pendiente' | 'aceptada' | 'rechazada'; decision_reason: string | null;
+  decided_at: string | null; created_at: string;
+}
+export interface FamilyOutcome {
+  status: 'pendiente' | 'aceptada' | 'rechazada'; reason: string | null; decided_at: string | null;
 }
 export interface FamilyNotification {
   id: string;
   family_id: string;
   related_family_id?: string | null;
   category: 'cita' | 'documento' | 'sistema';
+  title: string;
+  message: string;
+  created_at: string;
+  read_at: string | null;
+}
+
+export interface InstitutionNotification {
+  id: string;
+  institution_id: string;
+  related_family_id: string | null;
+  category: 'documento' | 'informe' | 'sistema';
   title: string;
   message: string;
   created_at: string;
@@ -302,6 +323,12 @@ export class SupabaseService {
     return (data ?? []) as FamilyAppointment[];
   }
 
+  async getMyFamilyOutcome(): Promise<FamilyOutcome | null> {
+    const { data, error } = await this.client.rpc('family_latest_report_outcome');
+    if (error) throw error;
+    return (data?.[0] as FamilyOutcome | undefined) ?? null;
+  }
+
   async listMyFamilyNotifications(): Promise<FamilyNotification[]> {
     const { data, error } = await this.client.from('family_notifications').select('*').order('created_at', { ascending: false });
     if (error) throw error;
@@ -322,10 +349,59 @@ export class SupabaseService {
     if (error) throw error;
   }
 
+  async listInstitutionNotifications(): Promise<InstitutionNotification[]> {
+    const { data, error } = await this.client.from('institution_notifications').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as InstitutionNotification[];
+  }
+
+  async markInstitutionNotificationRead(notificationId: string): Promise<void> {
+    const { error } = await this.client.from('institution_notifications').update({ read_at: new Date().toISOString() }).eq('id', notificationId).is('read_at', null);
+    if (error) throw error;
+  }
+
+  async markAllInstitutionNotificationsRead(): Promise<void> {
+    const { data: sessionData, error: sessionError } = await this.client.auth.getSession();
+    if (sessionError) throw sessionError;
+    const institutionId = sessionData.session?.user.id;
+    if (!institutionId) throw new Error('Inicia sesión nuevamente para actualizar las notificaciones.');
+    const { error } = await this.client.from('institution_notifications').update({ read_at: new Date().toISOString() }).eq('institution_id', institutionId).is('read_at', null);
+    if (error) throw error;
+  }
+
   async listAdminFamilyCases(): Promise<FamilyCase[]> {
     const { data, error } = await this.client.rpc('admin_list_family_cases');
     if (error) throw error;
     return ((data ?? []) as FamilyCase[]).filter((family) => family.documents?.length > 0);
+  }
+
+  async listInstitutionFamilyCases(): Promise<FamilyCase[]> {
+    const { data, error } = await this.client.rpc('institution_list_family_cases');
+    if (error) throw error;
+    return ((data ?? []) as FamilyCase[]).filter((family) => family.documents?.length > 0);
+  }
+
+  async listInstitutionPsychReports(): Promise<FamilyPsychReport[]> {
+    const { data, error } = await this.client.rpc('institution_list_psych_reports');
+    if (error) throw error;
+    return (data ?? []) as FamilyPsychReport[];
+  }
+
+  async decidePsychReport(reportId: string, status: 'aceptada' | 'rechazada', reason: string): Promise<void> {
+    const { error } = await this.client.rpc('institution_decide_psych_report', {
+      target_report_id: reportId,
+      new_status: status,
+      decision_note: reason.trim() || null,
+    });
+    if (error) throw error;
+  }
+
+  async reviewInstitutionFamily(familyId: string, status: 'aprobada' | 'rechazada'): Promise<void> {
+    const { error } = await this.client.rpc('institution_review_family_case', {
+      target_family_id: familyId,
+      new_status: status,
+    });
+    if (error) throw error;
   }
 
   async setFamilyApproval(familyId: string, status: 'aprobada' | 'rechazada'): Promise<void> {
@@ -353,6 +429,44 @@ export class SupabaseService {
     const { data, error } = await this.client.rpc('psychologist_list_family_appointments');
     if (error) throw error;
     return (data ?? []) as FamilyAppointment[];
+  }
+
+  async markFamilyAppointmentAttended(appointmentId: string): Promise<void> {
+    const { error } = await this.client.rpc('psychologist_confirm_family_attendance', { target_appointment_id: appointmentId });
+    if (error) throw error;
+  }
+
+  async saveFamilyPsychReport(input: { appointmentId: string; observations: string; strengths: string; concerns: string; recommendation: string }): Promise<void> {
+    const { error } = await this.client.rpc('psychologist_submit_family_report', {
+      target_appointment_id: input.appointmentId,
+      report_observations: input.observations.trim(),
+      report_strengths: input.strengths.trim(),
+      report_concerns: input.concerns.trim(),
+      report_recommendation: input.recommendation.trim(),
+    });
+    if (error) throw error;
+  }
+
+  async updatePsychologistFamilyReport(reportId: string, input: { observations: string; strengths: string; concerns: string; recommendation: string }): Promise<void> {
+    const { error } = await this.client.rpc('psychologist_update_family_report', {
+      target_report_id: reportId,
+      report_observations: input.observations.trim(),
+      report_strengths: input.strengths.trim(),
+      report_concerns: input.concerns.trim(),
+      report_recommendation: input.recommendation.trim(),
+    });
+    if (error) throw error;
+  }
+
+  async deletePsychologistFamilyReport(reportId: string): Promise<void> {
+    const { error } = await this.client.rpc('psychologist_delete_family_report', { target_report_id: reportId });
+    if (error) throw error;
+  }
+
+  async listPsychologistReports(): Promise<FamilyPsychReport[]> {
+    const { data, error } = await this.client.rpc('psychologist_list_family_reports');
+    if (error) throw error;
+    return (data ?? []) as FamilyPsychReport[];
   }
 
   async updateFamilyAppointment(id: string, input: { familyId: string; date: string; time: string; note: string }): Promise<void> {

@@ -162,11 +162,7 @@
             <div class="family-detail-heading"><div><span class="family-card-label">EXPEDIENTE FAMILIAR</span><h2>{{ selectedFamily.full_name }}</h2><p>{{ selectedFamily.email }}</p></div><span class="family-status" [class]="'family-status ' + selectedFamily.status">{{ statusLabel(selectedFamily.status) }}</span></div>
             <div class="family-documents-heading"><div><h3>Documentos enviados</h3><p>{{ selectedFamily.documents.length }} {{ selectedFamily.documents.length === 1 ? 'archivo' : 'archivos' }} en este expediente</p></div></div>
             <div class="family-document-list">@for (doc of selectedFamily.documents; track doc.id) { <article class="family-document-row"><span class="family-document-icon"><ion-icon name="document-text-outline"></ion-icon></span><span class="family-document-copy"><strong>{{ doc.document_type }}</strong><small>{{ doc.name }} · {{ formatDate(doc.created_at) }}</small></span><button type="button" class="family-open-document" (click)="openFamilyDocument(doc.storage_path)"><ion-icon name="document-text-outline"></ion-icon>Abrir archivo</button></article> } @empty { <p>Esta familia aún no ha enviado documentos.</p> }</div>
-            <div class="request-actions">
-              @if (selectedFamily.status !== 'aprobada') { <button class="approve-button" type="button" (click)="reviewFamily(selectedFamily, 'aprobada')">Aprobar familia</button> }
-              @if (selectedFamily.status !== 'rechazada') { <button class="reject-button" type="button" (click)="reviewFamily(selectedFamily, 'rechazada')">Rechazar</button> }
-              @if (selectedFamily.status === 'aprobada') { <button class="cancel-button" type="button" (click)="removeFamilyApproval(selectedFamily)">Retirar aprobación</button> }
-            </div>
+            <p class="demo-label">Vista de consulta. La institución es quien revisa y decide sobre este expediente.</p>
           </section>
         }
       } @else if (activeSection === 'citas') {

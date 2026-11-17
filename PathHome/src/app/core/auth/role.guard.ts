@@ -30,3 +30,23 @@ export const roleGuard: CanActivateFn = async (route) => {
     return false;
   }
 };
+
+export const catalogAccessGuard: CanActivateFn = async () => {
+  const router = inject(Router);
+  const supabase = inject(SupabaseService);
+  try {
+    const { data, error } = await supabase.client.auth.getUser();
+    if (error || !data.user) { await router.navigateByUrl('/login', { replaceUrl: true }); return false; }
+    const destination = await supabase.getDestinationForUser(data.user.id);
+    if (destination === '/institucion') return true;
+    if (destination === '/dashboard') {
+      const outcome = await supabase.getMyFamilyOutcome();
+      if (outcome?.status === 'aceptada') return true;
+    }
+    await router.navigateByUrl(destination, { replaceUrl: true });
+    return false;
+  } catch {
+    await router.navigateByUrl('/login', { replaceUrl: true });
+    return false;
+  }
+};

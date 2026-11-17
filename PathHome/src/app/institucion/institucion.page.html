@@ -1,18 +1,29 @@
 ﻿<ion-content class="institution-content" [fullscreen]="true">
   <div class="institution-app">
-    <aside class="institution-sidebar">
+    <header class="institution-mobile-topbar">
+      <a class="institution-mobile-brand" href="/institucion" aria-label="PathHome, ir a Inicio" (click)="$event.preventDefault(); showSection('inicio')">
+        <img src="/assets/img/logo_splash.png" alt=""><span>PathHome</span>
+      </a>
+      <button class="institution-menu-toggle" type="button" [attr.aria-expanded]="mobileMenuOpen" aria-controls="institution-navigation" [attr.aria-label]="mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'" (click)="toggleMobileMenu()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="mobileMenuOpen ? 'M6 6l12 12M18 6L6 18' : 'M4 6h16M4 12h16M4 18h16'"></path></svg>
+      </button>
+    </header>
+    @if (mobileMenuOpen) { <button class="institution-menu-backdrop" type="button" aria-label="Cerrar menú" (click)="toggleMobileMenu()"></button> }
+    <aside class="institution-sidebar" [class.mobile-open]="mobileMenuOpen">
       <a class="brand" href="/institucion" aria-label="PathHome, ir a Inicio" (click)="$event.preventDefault(); showSection('inicio')">
+        <img class="brand-logo" src="/assets/img/logo_splash.png" alt="">
         <span class="brand-wordmark">PathHome</span>
       </a>
       <span class="sidebar-caption">Panel institucional</span>
-      <nav aria-label="Navegación institucional">
+      <nav id="institution-navigation" aria-label="Navegación institucional">
         @for (section of mainNavigation; track section.id) {
           <button type="button" [class.active]="activeNavigationSection === section.id" [attr.aria-current]="activeNavigationSection === section.id ? 'page' : null" (click)="showSection(section.id)">
             <ion-icon [name]="section.icon" aria-hidden="true"></ion-icon><span>{{ section.label }}</span>
+            @if (section.id === 'notificaciones' && unreadNotificationCount > 0) { <b class="navigation-badge">{{ unreadNotificationCount }}</b> }
           </button>
         }
       </nav>
-      <div class="sidebar-footer"><span class="demo-mark">CE</span><span><strong>Cuenta institucional</strong><small>Centro de Acogida Esperanza</small></span></div>
+      <div class="sidebar-footer"><span class="demo-mark">{{ institutionInitials }}</span><span><strong>Cuenta institucional</strong><small>{{ institutionName }}</small></span></div>
       <button class="sidebar-sign-out" type="button" (click)="signOut()"><ion-icon name="log-out-outline" aria-hidden="true"></ion-icon><span>Cerrar sesión</span></button>
     </aside>
 
@@ -20,15 +31,7 @@
       <header class="institution-topbar">
         <div class="topbar-organization">
           <span class="topbar-mark"><ion-icon name="business-outline" aria-hidden="true"></ion-icon></span>
-          <span><strong class="topbar-title">Centro de Acogida Esperanza <ion-icon class="verified-mark" name="checkmark-circle-outline" aria-label="Institución verificada"></ion-icon></strong><small>{{ activeSection === 'inicio' ? 'Gestiona los casos y citas de tu institución.' : (activeSection === 'ninos' ? 'Niños y adolescentes · Registro y perfiles' : sections.find(s => s.id === activeSection)?.label) }}</small></span>
-        </div>
-        <div class="topbar-tools">
-          <span class="demo-label">Vista demostrativa · datos ficticios</span>
-          <button class="topbar-notifications" type="button" [attr.aria-label]="unreadDemoNotificationCount + ' notificaciones ficticias'" (click)="showSection('notificaciones')">
-            <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
-            @if (unreadDemoNotificationCount > 0) { <b aria-hidden="true">{{ unreadDemoNotificationCount }}</b> }
-          </button>
-          <button class="topbar-account" type="button" (click)="showSection('perfil')" aria-label="Ver perfil institucional"><span class="account-avatar">CE</span><strong>Institución</strong><ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon></button>
+          <span><strong class="topbar-title">{{ institutionName }} <ion-icon class="verified-mark" name="checkmark-circle-outline" aria-label="Institución verificada"></ion-icon></strong><small>{{ activeSection === 'inicio' ? 'Gestiona los casos y citas de tu institución.' : (activeSection === 'ninos' ? 'Niños y adolescentes · Registro y perfiles' : sections.find(s => s.id === activeSection)?.label) }}</small></span>
         </div>
       </header>
 
@@ -39,43 +42,43 @@
             <span><h1>Panel de institución</h1><p>Gestión de expedientes y procesos</p></span>
           </header>
 
-          <div class="institution-metrics" aria-label="Indicadores de demostración">
-            <button class="institution-metric blue" type="button" (click)="showSection('ninos')"><span class="metric-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><strong>{{ demoChildren.length }}</strong><span>Niños y adolescentes</span></button>
-            <button class="institution-metric green" type="button" (click)="showSection('citas')"><span class="metric-icon"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon></span><strong>{{ pendingAppointmentCount }}</strong><span>Citas pendientes</span></button>
-            <button class="institution-metric yellow" type="button" (click)="showSection('notificaciones')"><span class="metric-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><strong>{{ familyInterestCount }}</strong><span>Familias interesadas</span></button>
-            <button class="institution-metric lavender" type="button" (click)="showSection('expedientes')"><span class="metric-icon"><ion-icon name="folder-outline" aria-hidden="true"></ion-icon></span><strong>{{ demoCases.length }}</strong><span>Procesos en seguimiento</span></button>
+          <div class="institution-metrics" aria-label="Resumen de actividad real">
+            <button class="institution-metric blue" type="button" (click)="showSection('expedientes')"><span class="metric-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><strong>{{ familyCases.length }}</strong><span>Familias con expediente</span></button>
+            <button class="institution-metric green" type="button" (click)="showSection('expedientes')"><span class="metric-icon"><ion-icon name="folder-outline" aria-hidden="true"></ion-icon></span><strong>{{ pendingFamilyCount }}</strong><span>Expedientes pendientes</span></button>
+            <button class="institution-metric yellow" type="button" (click)="showSection('informes')"><span class="metric-icon"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon></span><strong>{{ pendingPsychReportCount }}</strong><span>Informes por revisar</span></button>
+            <button class="institution-metric lavender" type="button" (click)="showSection('notificaciones')"><span class="metric-icon"><ion-icon name="notifications-outline" aria-hidden="true"></ion-icon></span><strong>{{ unreadNotificationCount }}</strong><span>Avisos sin leer</span></button>
           </div>
 
           <div class="home-dashboard-panels">
             <section class="institution-panel home-notifications-panel" aria-labelledby="home-notifications-title">
               <div class="section-title"><h2 id="home-notifications-title"><ion-icon name="notifications-outline" aria-hidden="true"></ion-icon> Notificaciones recientes</h2><button type="button" (click)="showSection('notificaciones')">Ver todas <span aria-hidden="true">→</span></button></div>
               <div class="home-notification-list">
-                @for (notification of demoNotifications; track notification.id) {
+                @for (notification of institutionNotifications.slice(0, 4); track notification.id) {
                   <button class="home-notification-row" type="button" (click)="showSection('notificaciones')" [attr.aria-label]="'Abrir notificación: ' + notification.title">
-                    <span class="home-notification-icon"><ion-icon [name]="notification.icon" aria-hidden="true"></ion-icon></span>
+                    <span class="home-notification-icon"><ion-icon [name]="notificationIcon(notification.category)" aria-hidden="true"></ion-icon></span>
                     <span class="home-notification-copy"><strong>{{ notification.title }}</strong><small>{{ notification.message }}</small></span>
-                    <span class="home-notification-time">{{ notification.time }}</span>
+                    <span class="home-notification-time">{{ formatNotificationDate(notification.created_at) }}</span>
                   </button>
-                }
+                } @empty { <p class="empty-demo-state">No hay notificaciones nuevas.</p> }
               </div>
             </section>
 
-            <section class="institution-panel home-appointments-panel" aria-labelledby="home-appointments-title">
-              <div class="section-title"><h2 id="home-appointments-title"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon> Próximas citas</h2><button type="button" (click)="showSection('citas')">Ver calendario <span aria-hidden="true">→</span></button></div>
+            <section class="institution-panel home-appointments-panel" aria-labelledby="home-reports-title">
+              <div class="section-title"><h2 id="home-reports-title"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon> Informes psicológicos recientes</h2><button type="button" (click)="showSection('informes')">Ver informes <span aria-hidden="true">→</span></button></div>
               <div class="home-appointment-list">
-                @for (appointment of demoAppointments; track appointment.id) {
-                  <button class="home-appointment-row" type="button" (click)="openDashboardAppointment(appointment)">
-                    <span class="home-appointment-date"><strong>{{ appointment.date.substring(0, 2) }}</strong><small>{{ appointment.date.substring(3, 5) }}</small></span>
-                    <span class="home-appointment-copy"><strong>{{ appointment.family }}</strong><small><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon> {{ appointment.time }} · {{ appointment.title }}</small></span>
-                    <span class="home-appointment-status">Demostración</span>
+                @for (report of institutionReports.slice(0, 4); track report.id) {
+                  <button class="home-appointment-row" type="button" (click)="showSection('informes'); selectedReport = report">
+                    <span class="home-appointment-date"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon></span>
+                    <span class="home-appointment-copy"><strong>{{ report.family_name }}</strong><small>{{ formatReportDate(report.appointment_date) }} · Informe psicológico</small></span>
+                    <span class="home-appointment-status">{{ report.status === 'pendiente' ? 'Pendiente' : report.status === 'aceptada' ? 'Aceptada' : 'No aceptada' }}</span>
                   </button>
-                }
+                } @empty { <p class="empty-demo-state">Aún no hay informes enviados por psicólogos.</p> }
               </div>
             </section>
           </div>
 
           <div class="institution-home-actions" aria-label="Acciones principales">
-            <button class="register-child-action" type="button" (click)="showSection('ninos')"><ion-icon name="add-outline" aria-hidden="true"></ion-icon> Registrar niño o niña</button>
+            <button class="register-child-action" type="button" (click)="showSection('expedientes')"><ion-icon name="folder-outline" aria-hidden="true"></ion-icon> Revisar expedientes</button>
             <button class="reports-action" type="button" (click)="showSection('reportes')"><ion-icon name="pie-chart-outline" aria-hidden="true"></ion-icon> Ver reportes estadísticos</button>
           </div>
         </section>
@@ -97,7 +100,7 @@
                   <label><span>Nombre(s) <b>*</b></span><input name="name" type="text" placeholder="Ej: María José" required minlength="2" autocomplete="off" /></label>
                   <label><span>Edad <b>*</b></span><select name="age" aria-label="Edad" required><option value="">Ej: 8 años</option><option>6 años</option><option>7 años</option><option>8 años</option><option>9 años</option><option>10 años</option></select></label>
                   <label><span>Género <b>*</b></span><select name="gender" aria-label="Género" required><option value="">Seleccionar...</option><option>Niña</option><option>Niño</option></select></label>
-                  <label><span>Institución responsable <b>*</b></span><select name="institution" aria-label="Institución responsable" required><option value="">Seleccionar institución</option><option>Centro de Acogida Esperanza</option></select></label>
+                  <label><span>Institución responsable <b>*</b></span><select name="institution" aria-label="Institución responsable" required><option value="">Seleccionar institución</option><option [value]="institutionName">{{ institutionName }}</option></select></label>
                   <label class="full-field"><span>Descripción breve</span><textarea rows="2" placeholder="Describe sus características (opcional)..."></textarea></label>
                 </div>
               </form>
@@ -138,14 +141,44 @@
 
       @if (activeSection === 'expedientes') {
         <section class="page-content">
-          <header class="section-heading section-heading-action"><div><h1>Expedientes</h1><p>Resumen visual de expedientes de demostración.</p></div><button type="button" (click)="showSection('nuevoexp')">＋ Nuevo expediente</button></header>
-          <div class="institution-subnav" aria-label="Áreas de gestión institucional"><button class="active" type="button" (click)="showSection('expedientes')">Expedientes</button><button type="button" (click)="showSection('ninos')">Niños a cargo</button><button type="button" (click)="showSection('evaluaciones')">Evaluaciones</button><button type="button" (click)="showSection('notificaciones')">Notificaciones</button></div>
-          <div class="table-card">
-            <div class="table-heading"><strong>Expedientes de ejemplo</strong><span>Datos ficticios · sin conexión a registros reales</span></div>
-            @for (record of demoCases; track record.id) {
-              <article class="case-row"><span class="case-icon blue"><ion-icon name="folder-outline"></ion-icon></span><div><strong>{{ record.id }}</strong><p>{{ record.family }} · {{ record.stage }}</p></div><span class="status" [class.pending]="record.status === 'En revisión'" [class.progress]="record.status === 'En curso'">{{ record.status }}</span><button class="arrow" type="button" [attr.aria-label]="'Ver expediente ' + record.id" (click)="openCaseDetails(record)">›</button></article>
-            }
-          </div>
+          <header class="page-heading family-cases-heading"><span class="heading-icon cases-heading-icon"><ion-icon name="folder-open-outline"></ion-icon></span><div><p class="family-eyebrow">GESTIÓN FAMILIAR</p><h1>Expedientes</h1><p>Revisa los documentos enviados y decide sobre cada solicitud familiar.</p></div><button type="button" class="refresh" (click)="loadFamilyCases()" [disabled]="familyCasesLoading"><ion-icon name="refresh-outline"></ion-icon>{{ familyCasesLoading ? 'Actualizando…' : 'Actualizar' }}</button></header>
+          @if (familyCasesNotice) { <p class="family-notice" role="status">{{ familyCasesNotice }}</p> }
+          @if (familyCasesError) { <p class="family-error" role="alert">{{ familyCasesError }} <button type="button" (click)="loadFamilyCases()">Intentar de nuevo</button></p> }
+          @if (!selectedFamily && !familyCasesLoading && familyCases.length) {
+            <section class="family-case-overview" aria-label="Resumen de solicitudes familiares"><span class="family-overview-icon"><ion-icon name="folder-open-outline"></ion-icon></span><div><strong>{{ familyCases.length }} {{ familyCases.length === 1 ? 'familia con expediente' : 'familias con expediente' }}</strong><small>Consulta cada solicitud y revisa sus documentos.</small></div><span class="family-overview-count"><b>{{ institutionFamilyDocumentCount }}</b><small>{{ institutionFamilyDocumentCount === 1 ? 'documento' : 'documentos' }}</small></span></section>
+          }
+          @if (!selectedFamily) {
+            @if (familyCasesLoading) { <div class="family-empty"><span class="family-loader"></span><strong>Cargando expedientes</strong><p>Buscando familias que enviaron documentos.</p></div> }
+            @else if (familyCases.length) {
+              <section class="family-case-grid" aria-label="Familias con documentos enviados">
+                @for (family of familyCases; track family.family_id) {
+                  <button type="button" class="family-case-card" (click)="selectedFamily = family"><span class="family-card-top"><span class="family-card-label"><ion-icon name="people-outline"></ion-icon> EXPEDIENTE FAMILIAR</span><span class="family-status" [class.aprobada]="family.status === 'aprobada'" [class.rechazada]="family.status === 'rechazada'">{{ familyStatusLabel(family.status) }}</span></span><strong class="family-card-name">{{ family.full_name }}</strong><span class="family-card-email">{{ family.email }}</span><span class="family-card-footer"><span>{{ family.documents.length }} {{ family.documents.length === 1 ? 'documento enviado' : 'documentos enviados' }}</span><span class="family-card-link">Abrir expediente <b>›</b></span></span></button>
+                }
+              </section>
+            } @else { <section class="institution-panel"><p>Aún no hay familias con documentos enviados.</p></section> }
+          } @else {
+            <button type="button" class="family-back-link" (click)="selectedFamily = null">‹ Volver a expedientes</button>
+            <section class="family-detail-panel"><div class="family-detail-heading"><div><span class="family-card-label">EXPEDIENTE FAMILIAR</span><h2>{{ selectedFamily.full_name }}</h2><p>{{ selectedFamily.email }}</p></div><span class="family-status" [class.aprobada]="selectedFamily.status === 'aprobada'" [class.rechazada]="selectedFamily.status === 'rechazada'">{{ familyStatusLabel(selectedFamily.status) }}</span></div>
+              <div class="family-documents-heading"><div><h3>Documentos enviados</h3><p>{{ selectedFamily.documents.length }} {{ selectedFamily.documents.length === 1 ? 'archivo' : 'archivos' }} en este expediente</p></div></div>
+              <div class="family-document-list">@for (doc of selectedFamily.documents; track doc.id) { <article class="family-document-row"><span class="family-document-icon"><ion-icon name="document-text-outline"></ion-icon></span><span class="family-document-copy"><strong>{{ doc.document_type }}</strong><small>{{ doc.name }} · {{ formatFamilyDate(doc.created_at) }}</small></span><button type="button" class="family-open-document" (click)="openFamilyDocument(doc.storage_path)"><ion-icon name="document-text-outline"></ion-icon> Abrir archivo</button></article> } @empty { <p>Esta familia aún no ha enviado documentos.</p> }</div>
+              <div class="family-review-actions">@if (selectedFamily.status !== 'aprobada') { <button type="button" class="family-approve-button" [disabled]="familyReviewLoading" (click)="reviewFamily(selectedFamily, 'aprobada')">{{ familyReviewLoading ? 'Guardando…' : 'Aceptar expediente' }}</button> } @if (selectedFamily.status !== 'rechazada') { <button type="button" class="family-reject-button" [disabled]="familyReviewLoading" (click)="reviewFamily(selectedFamily, 'rechazada')">Rechazar expediente</button> }</div>
+            </section>
+          }
+        </section>
+      }
+
+      @if (activeSection === 'informes') {
+        <section class="page-content institution-reports-page"><header class="section-heading section-heading-action"><div><h1>Informes psicológicos</h1><p>Revisa la evaluación profesional y decide si la familia puede acceder al catálogo.</p></div><button type="button" (click)="loadInstitutionReports()" [disabled]="reportsLoading">{{ reportsLoading ? 'Actualizando…' : 'Actualizar' }}</button></header>
+          @if (reportsError) { <p class="family-error" role="alert">{{ reportsError }}</p> }
+          @if (selectedReport) {
+            <button type="button" class="family-back-link" (click)="selectedReport = null">‹ Volver a informes</button>
+            <section class="family-detail-panel"><div class="family-detail-heading"><div><span class="family-card-label">INFORME PSICOLÓGICO</span><h2>{{ selectedReport.family_name }}</h2><p>Cita del {{ formatReportDate(selectedReport.appointment_date) }} · {{ selectedReport.appointment_time.slice(0, 5) }}</p></div><span class="family-status" [class.aprobada]="selectedReport.status === 'aceptada'" [class.rechazada]="selectedReport.status === 'rechazada'">{{ selectedReport.status === 'aceptada' ? 'Aceptada' : selectedReport.status === 'rechazada' ? 'No aceptada' : 'Pendiente de decisión' }}</span></div>
+              <div class="institution-report-copy"><h3>Observaciones de la cita</h3><p>{{ selectedReport.observations }}</p><h3>Fortalezas observadas</h3><p>{{ selectedReport.strengths }}</p><h3>Aspectos por atender</h3><p>{{ selectedReport.concerns }}</p><h3>Recomendación profesional</h3><p>{{ selectedReport.recommendation }}</p></div>
+              @if (selectedReport.status === 'pendiente') { <label class="institution-report-reason"><span>Motivo (obligatorio si no se acepta)</span><textarea rows="3" [value]="reportDecisionReason" (input)="reportDecisionReason = $any($event.target).value" placeholder="Explica a la familia y al psicólogo qué debe mejorar o atender."></textarea></label><div class="family-review-actions"><button type="button" class="family-approve-button" [disabled]="reportDecisionBusy" (click)="decidePsychologicalReport(selectedReport, 'aceptada')">{{ reportDecisionBusy ? 'Guardando…' : 'Aceptar para el catálogo' }}</button><button type="button" class="family-reject-button" [disabled]="reportDecisionBusy" (click)="decidePsychologicalReport(selectedReport, 'rechazada')">Rechazar y explicar motivo</button></div> } @else if (selectedReport.decision_reason) { <p class="family-notice"><strong>Motivo registrado:</strong> {{ selectedReport.decision_reason }}</p> }
+            </section>
+          } @else if (reportsLoading) { <div class="family-empty"><span class="family-loader"></span><strong>Cargando informes</strong><p>Buscando evaluaciones enviadas por los psicólogos.</p></div> }
+          @else if (institutionReports.length) { <section class="family-case-grid" aria-label="Informes psicológicos enviados">@for (report of institutionReports; track report.id) { <button type="button" class="family-case-card" (click)="selectedReport = report; reportDecisionReason = ''"><span class="family-card-top"><span class="family-card-label">INFORME PSICOLÓGICO</span><span class="family-status" [class.aprobada]="report.status === 'aceptada'" [class.rechazada]="report.status === 'rechazada'">{{ report.status === 'aceptada' ? 'Aceptada' : report.status === 'rechazada' ? 'No aceptada' : 'Pendiente' }}</span></span><strong class="family-card-name">{{ report.family_name }}</strong><span class="family-card-email">Cita del {{ formatReportDate(report.appointment_date) }}</span><span class="family-card-footer"><span>{{ report.status === 'pendiente' ? 'Requiere decisión institucional' : 'Decisión registrada' }}</span><span class="family-card-link">Revisar informe ›</span></span></button> }</section> }
+          @else { <div class="family-empty"><strong>No hay informes pendientes</strong><p>Cuando un psicólogo confirme asistencia y envíe un informe, aparecerá aquí para decidir.</p></div> }
         </section>
       }
 
@@ -193,25 +226,26 @@
 
       @if (activeSection === 'notificaciones') {
         <section class="page-content">
-          <header class="section-heading section-heading-action"><div><h1>Notificaciones</h1><p>Avisos de ejemplo · no corresponden a eventos reales.</p></div><button type="button" [disabled]="unreadDemoNotificationCount === 0" (click)="markAllDemoNotificationsRead()">Marcar todas como leídas</button></header>
-          <p class="demo-save-notice" role="status">{{ demoNotice || 'Los cambios de lectura solo se reflejan temporalmente en esta vista.' }}</p>
+          <header class="section-heading section-heading-action"><div><h1>Notificaciones</h1><p>Avisos reales de documentos e informes enviados a la institución.</p></div><button type="button" [disabled]="notificationActionBusy || unreadNotificationCount === 0" (click)="markAllInstitutionNotificationsRead()">{{ notificationActionBusy ? 'Guardando…' : 'Marcar todas como leídas' }}</button></header>
+          @if (notificationsError) { <p class="family-error" role="alert">{{ notificationsError }} <button type="button" (click)="loadInstitutionNotifications()">Intentar de nuevo</button></p> }
           <div class="notification-list">
-            @for (notification of demoNotifications; track notification.id) {
-              <article class="notification-card" [class.is-read]="readNotificationIds.has(notification.id)"><span class="case-icon blue"><ion-icon [name]="notification.icon" aria-hidden="true"></ion-icon></span><div><strong>{{ notification.title }}</strong><p>{{ notification.message }}</p><small>{{ notification.id }} · {{ notification.category }} · {{ notification.time }}</small></div><button type="button" [disabled]="readNotificationIds.has(notification.id)" (click)="markDemoNotificationRead(notification.id)">{{ readNotificationIds.has(notification.id) ? 'Leída' : 'Marcar leída' }}</button></article>
-            }
+            @if (notificationsLoading) { <div class="family-empty"><span class="family-loader"></span><strong>Cargando notificaciones</strong></div> }
+            @else { @for (notification of institutionNotifications; track notification.id) {
+              <article class="notification-card" [class.is-read]="!!notification.read_at"><span class="case-icon blue"><ion-icon [name]="notificationIcon(notification.category)" aria-hidden="true"></ion-icon></span><div><strong>{{ notification.title }}</strong><p>{{ notification.message }}</p><small>{{ notification.category === 'documento' ? 'Documento' : notification.category === 'informe' ? 'Informe psicológico' : 'Sistema' }} · {{ formatNotificationDate(notification.created_at) }}</small></div><button type="button" [disabled]="notificationActionBusy || !!notification.read_at" (click)="markInstitutionNotificationRead(notification)">{{ notification.read_at ? 'Leída' : 'Marcar leída' }}</button></article>
+            } @empty { <div class="family-empty"><strong>No hay notificaciones</strong><p>Cuando una familia envíe documentos o un psicólogo remita un informe, aparecerá aquí.</p></div> } }
           </div>
         </section>
       }
 
       @if (activeSection === 'reportes') {
-        <section class="page-content institution-reports-page"><header class="section-heading"><h1>Reportes y estadísticas</h1><p>Resumen derivado únicamente de registros de demostración.</p></header>
-          <div class="summary-grid"><article class="summary-card blue"><strong>{{ demoCases.length }}</strong><span>Expedientes de ejemplo</span></article><article class="summary-card yellow"><strong>{{ pendingAppointmentCount }}</strong><span>Citas programadas</span></article><article class="summary-card lavender"><strong>{{ pendingEvaluationCount }}</strong><span>Evaluaciones pendientes</span></article><article class="summary-card green"><strong>{{ followUpChildrenCount }}</strong><span>Perfiles en seguimiento</span></article></div>
-          <section class="institution-panel report-stage-panel"><div class="section-title"><h2>Expedientes por etapa</h2><span class="demo-action-label">Conteos de ejemplo</span></div>@for (stage of reportStages; track stage.label) { <div class="report-stage"><span>{{ stage.label }} <strong>· {{ stage.count }}</strong></span><div class="report-stage-track"><i [style.width.%]="stage.count ? 100 : 0"></i></div></div> }</section>
+        <section class="page-content institution-reports-page"><header class="section-heading"><h1>Resumen institucional</h1><p>Indicadores calculados con expedientes e informes reales.</p></header>
+          <div class="summary-grid"><article class="summary-card blue"><strong>{{ familyCases.length }}</strong><span>Familias con expediente</span></article><article class="summary-card yellow"><strong>{{ pendingFamilyCount }}</strong><span>Expedientes pendientes</span></article><article class="summary-card lavender"><strong>{{ pendingPsychReportCount }}</strong><span>Informes por revisar</span></article><article class="summary-card green"><strong>{{ institutionFamilyDocumentCount }}</strong><span>Documentos recibidos</span></article></div>
+          <section class="institution-panel report-stage-panel"><div class="section-title"><h2>Últimos informes psicológicos</h2><button type="button" (click)="showSection('informes')">Revisar informes</button></div>@for (report of institutionReports.slice(0, 5); track report.id) { <div class="report-stage"><span>{{ report.family_name }} · {{ formatReportDate(report.appointment_date) }} <strong>· {{ report.status === 'pendiente' ? 'Pendiente' : report.status === 'aceptada' ? 'Aceptada' : 'No aceptada' }}</strong></span><div class="report-stage-track"><i [style.width.%]="report.status === 'pendiente' ? 50 : 100"></i></div></div> } @empty { <p class="empty-demo-state">Todavía no hay informes psicológicos para resumir.</p> }</section>
         </section>
       }
 
       @if (activeSection === 'perfil') {
-        <section class="page-content"><header class="section-heading"><h1>Mi perfil</h1><p>Información de demostración.</p></header><article class="profile-card"><span class="profile-avatar">PH</span><div><strong>Personal de la institución</strong><p>Cuenta institucional</p><small>Los datos personales se mostrarán al conectar el servicio.</small></div></article><button class="sign-out" type="button" (click)="signOut()"><ion-icon name="log-out-outline"></ion-icon><span>Cerrar sesión</span><span>›</span></button></section>
+        <section class="page-content"><header class="section-heading"><h1>Mi perfil</h1><p>Información guardada en tu cuenta.</p></header><article class="profile-card"><span class="profile-avatar">{{ institutionInitials }}</span><div><strong>{{ institutionName }}</strong><p>Cuenta institucional</p><small>{{ institutionEmail }}</small></div></article><button class="sign-out" type="button" (click)="signOut()"><ion-icon name="log-out-outline"></ion-icon><span>Cerrar sesión</span><span>›</span></button></section>
       }
 
       @if (activeSection === 'detalle') {

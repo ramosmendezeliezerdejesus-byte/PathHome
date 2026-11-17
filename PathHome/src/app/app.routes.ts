@@ -1,6 +1,6 @@
 
 import type { Routes } from '@angular/router';
-import { roleGuard } from './core/auth/role.guard';
+import { catalogAccessGuard, roleGuard } from './core/auth/role.guard';
 
 export const routes: Routes = [
   {
@@ -16,6 +16,11 @@ export const routes: Routes = [
     canActivate: [roleGuard],
     data: { requiredDestination: '/dashboard' },
     loadComponent: () => import('./dashboard/dashboard.page').then((m) => m.DashboardPage),
+  },
+  {
+    path: 'catalogo',
+    canActivate: [catalogAccessGuard],
+    loadComponent: () => import('./catalogo/catalogo.page').then((m) => m.CatalogPage),
   },
   {
     path: 'psychologist',

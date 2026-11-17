@@ -86,6 +86,9 @@ ion-content.dashboard-content {
   .next-appointment-copy { display:grid; gap:3px; min-width:0; }
   .next-appointment-copy strong { font-size:13px; line-height:1.25; }
   .next-appointment-copy span { color:var(--muted); font-size:12px; }
+  .outcome-accepted { border-color:#d5f0e1; background:#f1fbf5; } .outcome-accepted .next-appointment-copy strong { color:#278b59; }
+  .outcome-rejected { border-color:#f4dfd9; background:#fff8f5; } .outcome-rejected .next-appointment-copy strong { color:#ae5d4f; }
+  .outcome-pending { border-color:#e6e1f7; background:#faf8ff; }
   .quick-icon ion-icon { font-size:25px; }
   .view-heading,.profile-heading { display:flex; align-items:center; gap:10px; min-height:42px; }
   .back-button { width:32px; height:36px; border:0; background:transparent; color:var(--ink); font-size:24px; }
@@ -98,6 +101,9 @@ ion-content.dashboard-content {
   .stage-status-icon { width:48px; height:48px; background:#e7e4ee; color:#a6a4b5; font-size:21px; }
   .stage-complete .stage-status-icon { background:#54cdb1; color:#fff; }
   .stage-current .stage-status-icon { background:#7255ec; color:#fff; box-shadow:0 0 0 4px #ded6ff; }
+  .stage-rejected { background:#fff3f2; }
+  .stage-rejected .stage-status-icon { background:#e85d66; color:#fff; }
+  .stage-rejected .stage-row-copy h2 { color:#c34d58; }
   .stage-row-copy { min-width:0; } .stage-row h2,.appointment-detail h2,.notification-copy h2,.profile-summary h2 { color:var(--ink); font-size:15px; line-height:1.25; font-weight:800; }
   .stage-row p { font-size:13px; }
   .process-reminder,.security-note { display:flex; align-items:center; gap:11px; padding:14px; border-radius:18px; background:#f2edff; color:#6355ae; }

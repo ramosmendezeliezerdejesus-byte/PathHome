@@ -76,9 +76,29 @@
           </button>
         </div>
 
-        @if (familyAppointments.length) {
+        @if (upcomingFamilyAppointments.length) {
           <button class="card next-appointment" type="button" (click)="openQuickLink('citas')">
-            <span class="next-appointment-copy"><strong>Próxima cita</strong><span>{{ appointmentDate(familyAppointments[0].appointment_date) }} · {{ familyAppointments[0].appointment_time }}</span></span>
+            <span class="next-appointment-copy"><strong>Próxima cita</strong><span>{{ appointmentDate(upcomingFamilyAppointments[0].appointment_date) }} · {{ upcomingFamilyAppointments[0].appointment_time }}</span></span>
+            <span class="chevron" aria-hidden="true">›</span>
+          </button>
+        } @else if (familyOutcome?.status === 'aceptada') {
+          <button class="card next-appointment outcome-accepted" type="button" (click)="openCatalog()">
+            <span class="next-appointment-copy"><strong>¡Tu evaluación fue aceptada!</strong><span>Ya puedes acceder al catálogo de perfiles.</span></span>
+            <span class="chevron" aria-hidden="true">›</span>
+          </button>
+        } @else if (familyOutcome?.status === 'rechazada') {
+          <button class="card next-appointment outcome-rejected" type="button" (click)="showSection('proceso')">
+            <span class="next-appointment-copy"><strong>Evaluación pendiente de una nueva cita</strong><span>{{ familyOutcome.reason || 'La institución solicita otra evaluación.' }}</span></span>
+            <span class="chevron" aria-hidden="true">›</span>
+          </button>
+        } @else if (familyOutcome?.status === 'pendiente') {
+          <button class="card next-appointment outcome-pending" type="button" (click)="showSection('proceso')">
+            <span class="next-appointment-copy"><strong>Informe en revisión</strong><span>La institución está revisando el informe psicológico.</span></span>
+            <span class="chevron" aria-hidden="true">›</span>
+          </button>
+        } @else if (completedFamilyAppointments.length) {
+          <button class="card next-appointment outcome-pending" type="button" (click)="showSection('proceso')">
+            <span class="next-appointment-copy"><strong>Asistencia confirmada</strong><span>El informe de tu cita está en preparación.</span></span>
             <span class="chevron" aria-hidden="true">›</span>
           </button>
         }
@@ -100,15 +120,22 @@
           <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
           <h1 id="process-title">Mi proceso</h1>
         </header>
-        <p class="section-note">El avance se actualiza con tus documentos, la revisión del administrador y las citas agendadas.</p>
+        <p class="section-note">El avance se actualiza con tus documentos, las citas y las decisiones de la institución.</p>
         <div class="stage-list">
           @for (stage of stages; track stage.name) {
-            <article class="stage-row" [class.stage-current]="stage.current" [class.stage-complete]="stage.complete">
+            <article class="stage-row" [class.stage-current]="stage.current" [class.stage-complete]="stage.complete" [class.stage-rejected]="stage.rejected">
               <span class="stage-status-icon" [class.current-icon]="stage.current" aria-hidden="true"><ion-icon [name]="stage.icon"></ion-icon></span>
               <div class="stage-row-copy"><h2>{{ stage.name }}</h2><p>{{ stage.status }}</p></div>
             </article>
           }
         </div>
+        @if (familyOutcome?.status === 'aceptada') {
+          <article class="process-reminder"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon><p>La institución aceptó tu evaluación psicológica. En Inicio tienes el acceso directo al catálogo.</p></article>
+        } @else if (familyOutcome?.status === 'rechazada') {
+          <article class="process-reminder"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon><p><strong>La institución decidió que todavía no puedes acceder al catálogo.</strong>@if (familyOutcome.reason) { <br />Motivo: {{ familyOutcome.reason }} } El psicólogo podrá programar otra cita de seguimiento.</p></article>
+        } @else if (familyOutcome?.status === 'pendiente') {
+          <article class="process-reminder"><ion-icon name="time-outline" aria-hidden="true"></ion-icon><p>Tu informe psicológico está en revisión por la institución.</p></article>
+        }
         <aside class="process-reminder">
           <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
           <p>Mantente atenta a tus notificaciones para conocer el siguiente paso.</p>
@@ -181,7 +208,7 @@
 
         @if (appointmentTab === 'proximas') {
           <div class="appointment-list">
-            @for (appointment of familyAppointments; track appointment.id) {
+            @for (appointment of upcomingFamilyAppointments; track appointment.id) {
               <article class="card appointment-detail">
                 <span class="appointment-icon" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
                 <div class="appointment-detail-copy">
@@ -193,10 +220,10 @@
             } @empty { <div class="card empty-panel"><strong>Aún no tienes citas agendadas</strong><p>Cuando el psicólogo agende una cita, aparecerá aquí.</p></div> }
           </div>
         } @else {
-          <div class="card empty-panel">
-
-            <strong>No hay citas anteriores</strong>
-            <p>Las citas completadas aparecerán aquí.</p>
+          <div class="appointment-list">
+            @for (appointment of completedFamilyAppointments; track appointment.id) {
+              <article class="card appointment-detail"><span class="appointment-icon"><ion-icon name="checkmark-circle-outline"></ion-icon></span><div class="appointment-detail-copy"><h2>{{ appointment.title }} · Asistencia confirmada</h2><p>{{ appointmentDate(appointment.appointment_date) }} · {{ appointment.appointment_time }}</p>@if (appointment.note) { <p>{{ appointment.note }}</p> }</div></article>
+            } @empty { <div class="card empty-panel"><strong>No hay citas anteriores</strong><p>Las citas completadas aparecerán aquí.</p></div> }
           </div>
         }
       </section>
@@ -343,12 +370,12 @@
     @if (activeSection === 'asistente' || activeSection === 'mensajes') {
       <section class="view conversation-view" aria-labelledby="conversation-title">
         <header class="view-heading"><button class="back-button" type="button" [attr.aria-label]="activeSection === 'asistente' ? 'Volver a inicio' : 'Volver a más opciones'" (click)="showSection(activeSection === 'asistente' ? 'inicio' : 'mas')">‹</button><h1 id="conversation-title">{{ activeSection === 'asistente' ? 'Asistente virtual' : 'Mensajes' }}</h1></header>
-        <p class="section-note">{{ activeSection === 'asistente' ? 'Consulta información general de tu proceso.' : 'Comunicación con la institución.' }}</p>
+        <p class="section-note">{{ activeSection === 'asistente' ? 'Consulta tus documentos, citas, evaluación psicológica, resultado de aptitud y acceso al catálogo.' : 'Comunicación con la institución.' }}</p>
         @if (activeSection === 'asistente') {
           <div class="assistant-chat" aria-live="polite" aria-label="Conversación con el asistente">
             <article class="assistant-message assistant-welcome">
               <div class="assistant-message-label"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon><span>PATHHOME IA</span></div>
-              <div class="assistant-text"><p>¡Hola, {{ firstName }}! Soy la IA de PathHome. Puedo ayudarte con tus documentos y las etapas de tu proceso. ¿Qué te gustaría saber?</p></div>
+              <div class="assistant-text"><p>¡Hola, {{ firstName }}! Soy la IA de PathHome. Puedo ayudarte con tus documentos, citas, evaluación psicológica y el resultado de aptitud. ¿Qué te gustaría saber?</p></div>
             </article>
             @for (message of assistantMessages; track $index) {
               <article class="assistant-message" [class.from-user]="message.role === 'user'">
@@ -369,7 +396,7 @@
           <span class="assistant-avatar" aria-hidden="true"><ion-icon [name]="activeSection === 'asistente' ? 'chatbubble-ellipses-outline' : 'help-circle-outline'"></ion-icon></span>
           <div class="conversation-copy">
             <strong>{{ activeSection === 'asistente' ? '¿Qué me falta para completar mi proceso?' : 'Tu espacio de mensajes' }}</strong>
-            <p>{{ activeSection === 'asistente' ? 'Consulta tus documentos, citas y etapas desde sus secciones.' : 'Aquí podrás revisar la comunicación de tu proceso.' }}</p>
+            <p>{{ activeSection === 'asistente' ? 'También puedes preguntar si la institución aceptó tu evaluación y si ya tienes acceso al catálogo.' : 'Aquí podrás revisar la comunicación de tu proceso.' }}</p>
           </div>
         </article>
         @if (activeSection === 'asistente') {
