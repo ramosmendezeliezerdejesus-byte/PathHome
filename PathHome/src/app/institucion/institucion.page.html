@@ -1,13 +1,13 @@
 ﻿<ion-content class="institution-content" [fullscreen]="true">
   <div class="institution-app">
     <aside class="institution-sidebar">
-      <a class="brand" href="/institucion" (click)="$event.preventDefault(); showSection('inicio')">
-        <img src="assets/img/logo_login.png" alt="PathHome" />
+      <a class="brand" href="/institucion" aria-label="PathHome, ir a Inicio" (click)="$event.preventDefault(); showSection('inicio')">
+        <span class="brand-wordmark">PathHome</span>
       </a>
       <span class="sidebar-caption">Panel institucional</span>
       <nav aria-label="Navegación institucional">
-        @for (section of sections; track section.id) {
-          <button type="button" [class.active]="activeNavigationSection === section.id" (click)="showSection(section.id)">
+        @for (section of mainNavigation; track section.id) {
+          <button type="button" [class.active]="activeNavigationSection === section.id" [attr.aria-current]="activeNavigationSection === section.id ? 'page' : null" (click)="showSection(section.id)">
             <ion-icon [name]="section.icon" aria-hidden="true"></ion-icon><span>{{ section.label }}</span>
           </button>
         }
@@ -16,11 +16,11 @@
       <button class="sidebar-sign-out" type="button" (click)="signOut()"><ion-icon name="log-out-outline" aria-hidden="true"></ion-icon><span>Cerrar sesión</span></button>
     </aside>
 
-    <main class="institution-main">
+    <main class="institution-main" [class.institution-main--home]="activeSection === 'inicio'">
       <header class="institution-topbar">
         <div class="topbar-organization">
           <span class="topbar-mark"><ion-icon name="business-outline" aria-hidden="true"></ion-icon></span>
-          <span><strong class="topbar-title">Centro de Acogida Esperanza <ion-icon class="verified-mark" name="checkmark-circle-outline" aria-label="Institución verificada"></ion-icon></strong><small>{{ activeSection === 'inicio' ? 'Gestiona los casos y citas de tu institución.' : (activeSection === 'ninos' ? 'Registrar Niño, Niña o Adolescente' : sections.find(s => s.id === activeSection)?.label) }}</small></span>
+          <span><strong class="topbar-title">Centro de Acogida Esperanza <ion-icon class="verified-mark" name="checkmark-circle-outline" aria-label="Institución verificada"></ion-icon></strong><small>{{ activeSection === 'inicio' ? 'Gestiona los casos y citas de tu institución.' : (activeSection === 'ninos' ? 'Niños y adolescentes · Registro y perfiles' : sections.find(s => s.id === activeSection)?.label) }}</small></span>
         </div>
         <div class="topbar-tools">
           <span class="demo-label">Vista demostrativa · datos ficticios</span>
@@ -34,54 +34,64 @@
 
       @if (activeSection === 'inicio') {
         <section class="page-content institution-dashboard">
-          <div class="institution-metrics" aria-label="Resumen de demostración">
-            <article class="institution-metric blue"><span class="metric-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><strong>48</strong><span>Niños a Cargo</span></article>
-            <article class="institution-metric green"><span class="metric-icon"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon></span><strong>12</strong><span>Citas Pendientes</span></article>
-            <article class="institution-metric yellow"><span class="metric-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><strong>20</strong><span>En Seguimiento</span></article>
+          <header class="institution-home-heading">
+            <span class="institution-home-mark"><ion-icon name="business-outline" aria-hidden="true"></ion-icon></span>
+            <span><h1>Panel de institución</h1><p>Gestión de expedientes y procesos</p></span>
+          </header>
+
+          <div class="institution-metrics" aria-label="Indicadores de demostración">
+            <button class="institution-metric blue" type="button" (click)="showSection('ninos')"><span class="metric-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><strong>{{ demoChildren.length }}</strong><span>Niños y adolescentes</span></button>
+            <button class="institution-metric green" type="button" (click)="showSection('citas')"><span class="metric-icon"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon></span><strong>{{ pendingAppointmentCount }}</strong><span>Citas pendientes</span></button>
+            <button class="institution-metric yellow" type="button" (click)="showSection('notificaciones')"><span class="metric-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><strong>{{ familyInterestCount }}</strong><span>Familias interesadas</span></button>
+            <button class="institution-metric lavender" type="button" (click)="showSection('expedientes')"><span class="metric-icon"><ion-icon name="folder-outline" aria-hidden="true"></ion-icon></span><strong>{{ demoCases.length }}</strong><span>Procesos en seguimiento</span></button>
           </div>
 
-          <div class="institution-dashboard-grid">
-            <section class="institution-panel children-panel" aria-labelledby="children-title">
-              <div class="section-title"><h1 id="children-title">Niños y Adolescentes</h1><button type="button" (click)="showSection('ninos')">Ver todos <span aria-hidden="true">→</span></button></div>
-              <div class="children-table" role="table" aria-label="Niños a cargo de demostración">
-                <div class="children-table-head" role="row"><span role="columnheader">Nombre</span><span role="columnheader">Edad</span><span role="columnheader">Estado</span><span role="columnheader">Acciones</span></div>
-                @for (child of dashboardChildren; track child.profile) {
-                  <button class="children-table-row" type="button" role="row" [attr.aria-label]="'Ver perfil demostrativo ' + child.profile" (click)="openChildProfile(child)">
-                    <span class="child-identity" role="cell"><span [class]="'child-avatar ' + child.tone">@if (child.photo) { <img [src]="child.photo" alt="" /> } @else { <ion-icon name="person-outline" aria-hidden="true"></ion-icon> }</span><span><strong>{{ child.type }} · {{ child.profile }}</strong><small>Perfil protegido</small></span></span>
-                    <span role="cell">{{ child.age }}</span><span role="cell"><i class="status-dot" [class.waiting]="child.status === 'Cita pendiente'"></i><span class="child-status" [class.appointment-status]="child.status === 'Cita pendiente'">{{ child.status }}</span></span><span class="row-action" role="cell" aria-label="Abrir expediente de demostración"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon></span>
+          <div class="home-dashboard-panels">
+            <section class="institution-panel home-notifications-panel" aria-labelledby="home-notifications-title">
+              <div class="section-title"><h2 id="home-notifications-title"><ion-icon name="notifications-outline" aria-hidden="true"></ion-icon> Notificaciones recientes</h2><button type="button" (click)="showSection('notificaciones')">Ver todas <span aria-hidden="true">→</span></button></div>
+              <div class="home-notification-list">
+                @for (notification of demoNotifications; track notification.id) {
+                  <button class="home-notification-row" type="button" (click)="showSection('notificaciones')" [attr.aria-label]="'Abrir notificación: ' + notification.title">
+                    <span class="home-notification-icon"><ion-icon [name]="notification.icon" aria-hidden="true"></ion-icon></span>
+                    <span class="home-notification-copy"><strong>{{ notification.title }}</strong><small>{{ notification.message }}</small></span>
+                    <span class="home-notification-time">{{ notification.time }}</span>
                   </button>
                 }
               </div>
-              <p class="panel-footnote">Datos de ejemplo · la información real solo se muestra a personal autorizado.</p>
             </section>
 
-            <section class="institution-panel appointments-panel" aria-labelledby="appointments-title">
-              <div class="section-title"><h2 id="appointments-title">Próximas Citas</h2><button type="button" (click)="showSection('citas')">Ver calendario <span aria-hidden="true">→</span></button></div>
-              @for (appointment of demoAppointments; track appointment.id) {
-                <button class="appointment-row" type="button" [class.selected]="selectedAppointment?.id === appointment.id" (click)="openAppointmentDetails(appointment)">
-                  <span class="appointment-date"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon></span>
-                  <span><strong>{{ appointment.date }} · {{ appointment.time }}</strong><small>Fecha ficticia · {{ appointment.family }}</small></span>
-                </button>
-              }
-              @if (selectedAppointment) {
-                <article class="appointment-detail demo-detail"><strong>{{ selectedAppointment.title }}</strong><span>ID {{ selectedAppointment.id }} · Expediente {{ selectedAppointment.caseId }}</span><small>{{ selectedAppointment.location }}</small><button class="appointment-detail-close" type="button" (click)="selectedAppointment = null">Cerrar detalle</button></article>
-              }
-              <button class="panel-action" type="button" (click)="showSection('citas')"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon> Consultar agenda <span aria-hidden="true">›</span></button>
+            <section class="institution-panel home-appointments-panel" aria-labelledby="home-appointments-title">
+              <div class="section-title"><h2 id="home-appointments-title"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon> Próximas citas</h2><button type="button" (click)="showSection('citas')">Ver calendario <span aria-hidden="true">→</span></button></div>
+              <div class="home-appointment-list">
+                @for (appointment of demoAppointments; track appointment.id) {
+                  <button class="home-appointment-row" type="button" (click)="openDashboardAppointment(appointment)">
+                    <span class="home-appointment-date"><strong>{{ appointment.date.substring(0, 2) }}</strong><small>{{ appointment.date.substring(3, 5) }}</small></span>
+                    <span class="home-appointment-copy"><strong>{{ appointment.family }}</strong><small><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon> {{ appointment.time }} · {{ appointment.title }}</small></span>
+                    <span class="home-appointment-status">Demostración</span>
+                  </button>
+                }
+              </div>
             </section>
+          </div>
+
+          <div class="institution-home-actions" aria-label="Acciones principales">
+            <button class="register-child-action" type="button" (click)="showSection('ninos')"><ion-icon name="add-outline" aria-hidden="true"></ion-icon> Registrar niño o niña</button>
+            <button class="reports-action" type="button" (click)="showSection('reportes')"><ion-icon name="pie-chart-outline" aria-hidden="true"></ion-icon> Ver reportes estadísticos</button>
           </div>
         </section>
       }
 
       @if (activeSection === 'ninos') {
         <section class="page-content child-registration-page">
-          <header class="section-heading section-heading-action"><div><h1>Registrar Niño, Niña o Adolescente</h1><p>Completa la información del perfil de forma segura.</p></div><span class="privacy-label"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Registro protegido</span></header>
+          <header class="section-heading section-heading-action"><div><h1>Registrar niño o niña</h1><p>Registro, perfiles y seguimiento de demostración.</p></div><span class="privacy-label"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Registro protegido</span></header>
+          <div class="institution-subnav" aria-label="Navegación de perfiles"><button type="button" (click)="showSection('expedientes')">Expedientes</button><button class="active" type="button" (click)="showSection('ninos')">Niños a cargo</button><button type="button" (click)="showSection('catalogo')">Catálogo</button></div>
           <div class="child-registration-grid">
             <section class="institution-panel registration-panel" aria-label="Formulario de registro">
               <div class="registration-heading"><span><ion-icon name="add-outline" aria-hidden="true"></ion-icon></span><div><h2>Nuevo perfil</h2><p>Los campos con * son obligatorios</p></div></div>
               <form id="child-registration-form" class="child-form-layout" novalidate (submit)="validateDemoForm($event, 'el perfil de ejemplo')">
                 <label class="photo-upload" for="child-photo">
-                  <input id="child-photo" type="file" accept="image/jpeg,image/png" disabled />
-                  <ion-icon name="camera-outline" aria-hidden="true"></ion-icon><strong>Foto no disponible</strong><span>Vista de demostración</span>
+                  <input id="child-photo" type="file" accept="image/jpeg,image/png" (change)="selectDemoFile($event, 'child')" />
+                  <ion-icon name="camera-outline" aria-hidden="true"></ion-icon><strong>Subir foto</strong><span>{{ childPhotoNotice }}</span>
                 </label>
                 <div class="child-form-fields">
                   <label><span>Nombre(s) <b>*</b></span><input name="name" type="text" placeholder="Ej: María José" required minlength="2" autocomplete="off" /></label>
@@ -107,9 +117,29 @@
         </section>
       }
 
+      @if (activeSection === 'catalogo') {
+        <section class="page-content catalog-page">
+          <header class="section-heading section-heading-action"><div><h1>Catálogo de perfiles autorizados</h1><p>Perfiles de demostración · sin conexión a registros reales.</p></div><span class="privacy-label"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Información protegida</span></header>
+          <section class="institution-panel catalog-panel" aria-label="Perfiles ficticios disponibles para consulta">
+            <div class="section-title"><h2>Perfiles de ejemplo</h2><span class="demo-action-label">{{ demoChildren.length }} perfiles ficticios</span></div>
+            <p class="catalog-notice">Este catálogo utiliza únicamente datos ficticios. No muestra registros reales ni administra autorizaciones.</p>
+            <div class="catalog-card-grid">
+              @for (child of demoChildren; track child.profile) {
+                <article class="catalog-child-card">
+                  <span [class]="'catalog-child-avatar ' + child.tone">@if (child.photo) { <img [src]="child.photo" alt="" /> } @else { <ion-icon name="person-outline" aria-hidden="true"></ion-icon> }</span>
+                  <div class="catalog-child-copy"><strong>{{ child.type }} · {{ child.age }}</strong><span>Perfil {{ child.profile }}</span><small>{{ child.status }} · demostración</small></div>
+                  <button type="button" (click)="openChildProfile(child, 'catalogo')">Ver perfil protegido <span aria-hidden="true">›</span></button>
+                </article>
+              }
+            </div>
+          </section>
+        </section>
+      }
+
       @if (activeSection === 'expedientes') {
         <section class="page-content">
           <header class="section-heading section-heading-action"><div><h1>Expedientes</h1><p>Resumen visual de expedientes de demostración.</p></div><button type="button" (click)="showSection('nuevoexp')">＋ Nuevo expediente</button></header>
+          <div class="institution-subnav" aria-label="Áreas de gestión institucional"><button class="active" type="button" (click)="showSection('expedientes')">Expedientes</button><button type="button" (click)="showSection('ninos')">Niños a cargo</button><button type="button" (click)="showSection('evaluaciones')">Evaluaciones</button><button type="button" (click)="showSection('notificaciones')">Notificaciones</button></div>
           <div class="table-card">
             <div class="table-heading"><strong>Expedientes de ejemplo</strong><span>Datos ficticios · sin conexión a registros reales</span></div>
             @for (record of demoCases; track record.id) {
@@ -138,6 +168,18 @@
 
       @if (activeSection === 'citas') {
         <section class="page-content"><header class="section-heading"><h1>Citas</h1><p>Agenda institucional · fechas y datos ficticios.</p></header>
+          <section class="institution-panel appointment-scheduler" aria-labelledby="schedule-title">
+            <div class="section-title"><h2 id="schedule-title">Programar cita</h2><span class="demo-action-label">Vista demostrativa · no se envían avisos</span></div>
+            <form class="institution-form" novalidate (submit)="validateDemoForm($event, 'la programación de la cita')">
+              <label><span>Expediente *</span><select name="appointmentCase" required><option value="">Seleccionar expediente</option>@for (record of demoCases; track record.id) { <option [value]="record.id">{{ record.id }} · {{ record.family }}</option> }</select></label>
+              <label><span>Tipo de cita *</span><select name="appointmentType" required><option value="">Seleccionar tipo</option><option>Entrevista inicial</option><option>Seguimiento</option><option>Evaluación</option></select></label>
+              <label><span>Fecha *</span><input name="appointmentDate" type="date" required /></label>
+              <label><span>Hora *</span><input name="appointmentTime" type="time" required /></label>
+              <label class="full-field"><span>Nota (opcional)</span><textarea name="appointmentNote" rows="2" placeholder="Nota para la cita demostrativa"></textarea></label>
+              <div class="form-actions"><span class="demo-save-notice" role="status">{{ demoNotice || 'Los datos son de ejemplo; no se guarda ni notifica a familias.' }}</span><button type="submit">Programar y notificar</button></div>
+            </form>
+          </section>
+          <h2 class="institution-subheading">Agenda</h2>
           <div class="table-card"><div class="table-heading"><strong>Citas de ejemplo</strong><span>Sin reservas reales</span></div>
             @for (appointment of demoAppointments; track appointment.id) {
               <article class="case-row"><span class="case-icon yellow"><ion-icon name="calendar-outline"></ion-icon></span><div><strong>{{ appointment.title }}</strong><p>{{ appointment.date }} · {{ appointment.time }} · {{ appointment.family }}</p></div><span class="status pending">Ficticia</span><button class="arrow" type="button" [attr.aria-label]="'Ver cita ' + appointment.id" (click)="openAppointmentDetails(appointment)">›</button></article>
@@ -162,7 +204,10 @@
       }
 
       @if (activeSection === 'reportes') {
-        <section class="page-content"><header class="section-heading"><h1>Reportes</h1><p>Resumen de actividad institucional · datos de demostración.</p></header><div class="summary-grid"><article class="summary-card blue"><strong>2</strong><span>Expedientes de ejemplo</span></article><article class="summary-card yellow"><strong>1</strong><span>Documentación pendiente</span></article><article class="summary-card lavender"><strong>1</strong><span>Evaluaciones pendientes</span></article><article class="summary-card green"><strong>1</strong><span>Citas de ejemplo</span></article></div></section>
+        <section class="page-content institution-reports-page"><header class="section-heading"><h1>Reportes y estadísticas</h1><p>Resumen derivado únicamente de registros de demostración.</p></header>
+          <div class="summary-grid"><article class="summary-card blue"><strong>{{ demoCases.length }}</strong><span>Expedientes de ejemplo</span></article><article class="summary-card yellow"><strong>{{ pendingAppointmentCount }}</strong><span>Citas programadas</span></article><article class="summary-card lavender"><strong>{{ pendingEvaluationCount }}</strong><span>Evaluaciones pendientes</span></article><article class="summary-card green"><strong>{{ followUpChildrenCount }}</strong><span>Perfiles en seguimiento</span></article></div>
+          <section class="institution-panel report-stage-panel"><div class="section-title"><h2>Expedientes por etapa</h2><span class="demo-action-label">Conteos de ejemplo</span></div>@for (stage of reportStages; track stage.label) { <div class="report-stage"><span>{{ stage.label }} <strong>· {{ stage.count }}</strong></span><div class="report-stage-track"><i [style.width.%]="stage.count ? 100 : 0"></i></div></div> }</section>
+        </section>
       }
 
       @if (activeSection === 'perfil') {
@@ -173,8 +218,16 @@
         <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver a expedientes" (click)="showSection('expedientes')">‹</button><div><h1>Detalle del expediente</h1><p>Información ficticia · sin conexión a registros reales</p></div></header>
           <article class="case-detail-card"><span class="case-icon blue"><ion-icon name="folder-outline"></ion-icon></span><div><strong>{{ selectedCase?.id || demoCases[0].id }}</strong><p>{{ selectedCase?.family || demoCases[0].family }} · Etapa actual: {{ selectedCase?.stage || demoCases[0].stage }}</p></div><span class="status pending">{{ selectedCase?.status || demoCases[0].status }}</span></article>
           @if (demoNotice) { <p class="demo-save-notice" role="status">{{ demoNotice }}</p> }
-          <div class="workflow-actions"><button type="button" (click)="showSection('familia')"><ion-icon name="person-outline"></ion-icon><span>Datos de la familia</span><b>›</b></button><button type="button" (click)="openCaseChildProfile()"><ion-icon name="person-outline"></ion-icon><span>Información del niño</span><b>›</b></button><button type="button" (click)="showSection('estudio')"><ion-icon name="document-text-outline"></ion-icon><span>Estudio social</span><b>›</b></button><button type="button" (click)="showSection('entrevista')"><ion-icon name="calendar-outline"></ion-icon><span>Entrevistas</span><b>›</b></button><button type="button" (click)="showSection('historial')"><ion-icon name="document-text-outline"></ion-icon><span>Historial del expediente</span><b>›</b></button></div>
+          <div class="workflow-actions"><button type="button" (click)="showSection('documentos')"><ion-icon name="document-text-outline"></ion-icon><span>Documentos del expediente</span><b>›</b></button><button type="button" (click)="showSection('familia')"><ion-icon name="person-outline"></ion-icon><span>Datos de la familia</span><b>›</b></button><button type="button" (click)="openCaseChildProfile()"><ion-icon name="people-outline"></ion-icon><span>Niños y adolescentes vinculados</span><b>›</b></button><button type="button" (click)="showSection('estudio')"><ion-icon name="document-text-outline"></ion-icon><span>Estudio social</span><b>›</b></button><button type="button" (click)="showSection('entrevista')"><ion-icon name="calendar-outline"></ion-icon><span>Entrevistas</span><b>›</b></button><button type="button" (click)="showSection('evaluaciones')"><ion-icon name="checkmark-circle-outline"></ion-icon><span>Evaluaciones y resultados</span><b>›</b></button><button type="button" (click)="showSection('asignaciones')"><ion-icon name="people-outline"></ion-icon><span>Asignaciones relacionadas</span><b>›</b></button><button type="button" (click)="showSection('historial')"><ion-icon name="document-text-outline"></ion-icon><span>Historial del expediente</span><b>›</b></button></div>
         </section>
+      }
+
+      @if (activeSection === 'documentos') {
+        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver al expediente" (click)="showSection('detalle')">‹</button><div><h1>Documentos del expediente</h1><p>{{ selectedCase?.id || demoCases[0].id }} · documentación protegida</p></div></header><section class="institution-panel case-subsection-panel"><div class="section-title"><h2>Documentación disponible</h2><span class="demo-action-label">Demostración</span></div><p class="empty-demo-state">{{ documentNotice }} No hay archivos adjuntos para consultar o descargar.</p><label class="document-demo-upload"><span>Seleccionar archivo para revisión local</span><input type="file" accept="image/jpeg,image/png,application/pdf" (change)="selectDemoFile($event, 'document')" /><small>{{ selectedDocumentNotice }}</small></label></section></section>
+      }
+
+      @if (activeSection === 'asignaciones') {
+        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver al expediente" (click)="showSection('detalle')">‹</button><div><h1>Asignaciones relacionadas</h1><p>{{ selectedCase?.id || demoCases[0].id }} · vínculos de demostración existentes</p></div></header><section class="institution-panel case-subsection-panel"><div class="section-title"><h2>Perfiles vinculados</h2><span class="demo-action-label">Sin asignaciones nuevas</span></div>@if (selectedCaseChildren.length) { @for (child of selectedCaseChildren; track child.profile) { <button class="registered-child" type="button" (click)="openChildProfile(child, 'asignaciones')"><span [class]="'registered-avatar ' + child.tone">@if (child.photo) { <img [src]="child.photo" alt="" /> } @else { <ion-icon name="person-outline" aria-hidden="true"></ion-icon> }</span><span class="registered-child-copy"><strong>{{ child.type }} · {{ child.age }}</strong><small>Perfil {{ child.profile }} · {{ child.status }}</small></span><span class="row-action"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon></span></button> } } @else { <p class="empty-demo-state">No hay perfiles ficticios vinculados a este expediente.</p> }</section></section>
       }
 
       @if (activeSection === 'nuevoexp') {
@@ -232,8 +285,8 @@
     </main>
 
     <nav class="institution-mobile-nav" aria-label="Navegación institucional">
-      @for (section of sections; track section.id) {
-        <button type="button" [class.active]="activeNavigationSection === section.id" (click)="showSection(section.id)"><ion-icon [name]="section.icon" aria-hidden="true"></ion-icon><span>{{ section.label }}</span></button>
+      @for (section of mainNavigation; track section.id) {
+        <button type="button" [class.active]="activeNavigationSection === section.id" [attr.aria-current]="activeNavigationSection === section.id ? 'page' : null" (click)="showSection(section.id)"><ion-icon [name]="section.icon" aria-hidden="true"></ion-icon><span>{{ section.mobileLabel }}</span></button>
       }
     </nav>
   </div>

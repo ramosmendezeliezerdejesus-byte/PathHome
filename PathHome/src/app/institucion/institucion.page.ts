@@ -22,7 +22,7 @@ import {
 } from 'ionicons/icons';
 import { SupabaseService } from '../core/supabase/supabase.service';
 
-type InstitutionSection = 'inicio' | 'ninos' | 'expedientes' | 'evaluaciones' | 'citas' | 'notificaciones' | 'reportes' | 'perfil' | 'detalle' | 'nuevoexp' | 'nino' | 'estudio' | 'entrevista' | 'familia' | 'historial';
+type InstitutionSection = 'inicio' | 'expedientes' | 'citas' | 'ninos' | 'reportes' | 'perfil' | 'catalogo' | 'evaluaciones' | 'notificaciones' | 'detalle' | 'nuevoexp' | 'documentos' | 'asignaciones' | 'nino' | 'estudio' | 'entrevista' | 'familia' | 'historial';
 
 interface DemoChild {
   type: string;
@@ -53,7 +53,7 @@ interface DemoAppointment {
 
 interface DemoNotification {
   id: string;
-  category: 'Cita' | 'Documento' | 'Sistema';
+  category: 'Cita' | 'Documento' | 'Sistema' | 'Interés familiar';
   title: string;
   message: string;
   time: string;
@@ -65,19 +65,39 @@ interface DemoNotification {
   standalone: true,
   imports: [IonContent, IonIcon],
   templateUrl: './institucion.page.html',
-  styleUrls: ['./institucion.page.scss'],
+  styleUrls: ['./institucion.page.scss', './institucion.navigation.scss', './institucion.home.scss', './institucion.home-panels.scss', './institucion.home-cases.scss', './institucion.workspaces.scss', './institucion.records.scss', './institucion.reports.scss'],
 })
 export class InstitutionPage {
   activeSection: InstitutionSection = 'inicio';
   readonly sections: { id: InstitutionSection; label: string; icon: string }[] = [
     { id: 'inicio', label: 'Inicio', icon: 'home-outline' },
-    { id: 'ninos', label: 'Niños a cargo', icon: 'people-outline' },
-    { id: 'expedientes', label: 'Seguimiento', icon: 'folder-outline' },
+    { id: 'ninos', label: 'Registrar niño o niña', icon: 'people-outline' },
+    { id: 'catalogo', label: 'Catálogo', icon: 'people-outline' },
+    { id: 'expedientes', label: 'Expedientes', icon: 'folder-outline' },
     { id: 'evaluaciones', label: 'Evaluaciones', icon: 'document-text-outline' },
     { id: 'citas', label: 'Citas', icon: 'calendar-outline' },
     { id: 'notificaciones', label: 'Notificaciones', icon: 'notifications-outline' },
     { id: 'reportes', label: 'Reportes', icon: 'pie-chart-outline' },
     { id: 'perfil', label: 'Perfil', icon: 'person-outline' },
+    { id: 'documentos', label: 'Documentos del expediente', icon: 'document-text-outline' },
+    { id: 'asignaciones', label: 'Asignaciones relacionadas', icon: 'people-outline' },
+    { id: 'detalle', label: 'Detalle del expediente', icon: 'folder-outline' },
+    { id: 'nuevoexp', label: 'Crear expediente', icon: 'add-outline' },
+    { id: 'nino', label: 'Perfil protegido', icon: 'person-outline' },
+    { id: 'estudio', label: 'Estudio social', icon: 'document-text-outline' },
+    { id: 'entrevista', label: 'Entrevistas', icon: 'calendar-outline' },
+    { id: 'familia', label: 'Datos de la familia', icon: 'person-outline' },
+    { id: 'historial', label: 'Historial del expediente', icon: 'document-text-outline' },
+  ];
+
+  readonly mainNavigation: { id: InstitutionSection; label: string; mobileLabel: string; icon: string }[] = [
+    { id: 'inicio', label: 'Inicio', mobileLabel: 'Inicio', icon: 'home-outline' },
+    { id: 'expedientes', label: 'Expedientes', mobileLabel: 'Exped.', icon: 'folder-outline' },
+    { id: 'citas', label: 'Citas', mobileLabel: 'Citas', icon: 'calendar-outline' },
+    { id: 'ninos', label: 'Registrar niño o niña', mobileLabel: 'Registrar', icon: 'people-outline' },
+    { id: 'catalogo', label: 'Catálogo', mobileLabel: 'Catálogo', icon: 'people-outline' },
+    { id: 'reportes', label: 'Reportes estadísticos', mobileLabel: 'Reportes', icon: 'pie-chart-outline' },
+    { id: 'perfil', label: 'Perfil', mobileLabel: 'Perfil', icon: 'person-outline' },
   ];
 
   readonly demoChildren: DemoChild[] = [
@@ -92,6 +112,10 @@ export class InstitutionPage {
     { id: 'EXP-2026-1047', family: 'Familia de ejemplo 02', stage: 'Evaluación psicológica', status: 'En curso' },
   ];
 
+  readonly recentDemoCases = this.demoCases;
+
+  readonly documentNotice = 'Los expedientes de esta vista son demostrativos y no contienen archivos personales.';
+
   readonly demoAppointments: DemoAppointment[] = [
     { id: 'CIT-2026-0018', date: '18/11/2026', time: '10:00 a. m.', title: 'Entrevista inicial', family: 'Familia de ejemplo 01', caseId: 'EXP-2026-1048', location: 'Centro de Acogida Esperanza · Sala 1' },
     { id: 'CIT-2026-0020', date: '20/11/2026', time: '02:00 p. m.', title: 'Reunión de seguimiento', family: 'Familia de ejemplo 02', caseId: 'EXP-2026-1047', location: 'Centro de Acogida Esperanza · Sala 2' },
@@ -103,12 +127,15 @@ export class InstitutionPage {
   ];
 
   readonly demoNotifications: DemoNotification[] = [
+    { id: 'NOT-000', category: 'Interés familiar', title: 'Interés familiar recibido', message: 'Familia de ejemplo 01 manifestó interés · expediente EXP-2026-1048.', time: 'Aviso ficticio', icon: 'people-outline' },
     { id: 'NOT-001', category: 'Cita', title: 'Cita de demostración próxima', message: 'Entrevista inicial · 18/11/2026 · 10:00 a. m.', time: 'Aviso ficticio', icon: 'calendar-outline' },
     { id: 'NOT-002', category: 'Documento', title: 'Documento pendiente de ejemplo', message: 'Expediente EXP-2026-1048 · documentación de demostración.', time: 'Aviso ficticio', icon: 'document-text-outline' },
     { id: 'NOT-003', category: 'Sistema', title: 'Actividad de ejemplo', message: 'Se muestra información demostrativa de la institución.', time: 'Aviso ficticio', icon: 'notifications-outline' },
   ];
 
   readonly dashboardChildren = this.demoChildren.slice(0, 3);
+  childPhotoNotice = 'JPG o PNG · máximo 5 MB';
+  selectedDocumentNotice = 'No se ha seleccionado ningún archivo.';
   selectedChild: DemoChild | null = null;
   selectedCase: DemoCase | null = null;
   selectedAppointment: DemoAppointment | null = null;
@@ -121,10 +148,36 @@ export class InstitutionPage {
     return this.demoNotifications.length - this.readNotificationIds.size;
   }
 
-  get activeNavigationSection(): InstitutionSection {
-    if (['detalle', 'nuevoexp', 'familia', 'nino', 'estudio', 'entrevista', 'historial'].includes(this.activeSection)) {
-      return this.activeSection === 'nino' ? 'ninos' : 'expedientes';
+  get pendingAppointmentCount(): number {
+    return this.demoAppointments.length;
+  }
+
+  get familyInterestCount(): number {
+    return this.demoNotifications.filter((notification) => notification.category === 'Interés familiar').length;
+  }
+
+  get followUpChildrenCount(): number {
+    return this.demoChildren.filter((child) => child.status === 'En seguimiento').length;
+  }
+
+  get pendingEvaluationCount(): number {
+    return this.demoEvaluations.filter((evaluation) => evaluation.status === 'Pendiente').length;
+  }
+
+  get selectedCaseChildren(): DemoChild[] {
+    return this.demoChildren.filter((child) => child.caseId === this.selectedCase?.id);
+  }
+
+  get reportStages(): { label: string; count: number }[] {
+    const stages = ['Documentación', 'Entrevista inicial', 'Evaluación psicológica', 'Estudio social', 'Seguimiento'];
+    return stages.map((label) => ({ label, count: this.demoCases.filter((record) => record.stage === label).length }));
+  }
+
+  get activeNavigationSection(): InstitutionSection | null {
+    if (['detalle', 'nuevoexp', 'documentos', 'asignaciones', 'familia', 'nino', 'estudio', 'entrevista', 'historial', 'evaluaciones'].includes(this.activeSection)) {
+      return 'expedientes';
     }
+    if (this.activeSection === 'notificaciones') return null;
     return this.activeSection;
   }
 
@@ -141,6 +194,28 @@ export class InstitutionPage {
 
   showDemoSaveNotice(): void {
     this.demoNotice = 'Demostración: no se guardó ni se envió información.';
+  }
+
+  selectDemoFile(event: Event, kind: 'child' | 'document'): void {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = kind === 'child' ? ['image/jpeg', 'image/png'] : ['image/jpeg', 'image/png', 'application/pdf'];
+    const allowedType = allowedTypes.includes(file.type);
+    if (!allowedType || file.size > 5 * 1024 * 1024) {
+      input.value = '';
+      const message = 'Selecciona un archivo JPG, PNG o PDF de hasta 5 MB. No se envió ningún archivo.';
+      if (kind === 'child') this.childPhotoNotice = message;
+      else this.selectedDocumentNotice = message;
+      return;
+    }
+
+    const notice = `${file.name} · selección local, no se subió ni guardó.`;
+    if (kind === 'child') this.childPhotoNotice = notice;
+    else this.selectedDocumentNotice = notice;
   }
 
   openChildProfile(child: DemoChild, returnTo: InstitutionSection = this.activeSection): void {
@@ -173,6 +248,11 @@ export class InstitutionPage {
   openAppointmentDetails(appointment: DemoAppointment): void {
     this.selectedAppointment = appointment;
     this.demoNotice = '';
+  }
+
+  openDashboardAppointment(appointment: DemoAppointment): void {
+    this.showSection('citas');
+    this.openAppointmentDetails(appointment);
   }
 
   openEvaluationDetails(evaluation: (typeof this.demoEvaluations)[number]): void {

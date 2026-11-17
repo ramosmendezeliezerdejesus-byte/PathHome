@@ -1,0 +1,17 @@
+:host .institution-main{background:#fbf8fd}
+:host .institution-main:before,:host .institution-main:after{display:none}
+:host .institution-main--home .page-content{width:100%;max-width:none;padding:42px clamp(28px,3.8vw,72px) 40px}
+:host .institution-home-heading{display:flex;align-items:center;gap:18px;margin:0 0 24px}
+:host .institution-home-mark{display:grid;width:82px;height:82px;flex:none;place-items:center;background:#e7f1ff;color:#4387df}
+:host .institution-home-mark ion-icon{font-size:54px}
+:host .institution-home-heading h1{margin:0;color:#4b507e;font-size:clamp(24px,2vw,34px);font-weight:900;line-height:1.05}
+:host .institution-home-heading p{margin:4px 0 0;color:#9295b1;font-size:clamp(14px,1.05vw,19px)}
+:host .institution-shortcut-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 18px;margin-bottom:24px}
+:host .institution-shortcut{display:grid;min-width:0;min-height:144px;align-content:start;justify-items:start;gap:6px;padding:24px 22px;border:1px solid #e7e3f2;border-radius:26px;box-shadow:0 5px 16px #52477910;color:#4b507e;font:inherit;text-align:left;cursor:pointer}
+:host .institution-shortcut.blue{background:#e4f1fb}:host .institution-shortcut.green{background:#e2f3e8}:host .institution-shortcut.yellow{background:#fff0d8}:host .institution-shortcut.lavender{background:#eee8fa}
+:host .shortcut-icon{display:grid;width:60px;height:60px;place-items:center;margin-bottom:4px;background:#ffffff45;color:#5487ed}
+:host .institution-shortcut.green .shortcut-icon{color:#43b783}:host .institution-shortcut.yellow .shortcut-icon{color:#ec922f}:host .institution-shortcut.lavender .shortcut-icon{color:#6554db}
+:host .shortcut-icon ion-icon{font-size:34px}
+:host .institution-shortcut strong{font-size:21px;font-weight:900}:host .institution-shortcut>span:last-child{color:#9195b1;font-size:18px}
+@media(max-width:900px){:host .institution-main--home .page-content{padding:22px 20px 28px}:host .institution-home-heading{margin-bottom:18px}:host .institution-home-mark{width:58px;height:58px}:host .institution-home-mark ion-icon{font-size:38px}:host .institution-shortcut-grid{gap:12px}:host .institution-shortcut{min-height:112px;padding:16px;border-radius:20px}:host .shortcut-icon{width:42px;height:42px}:host .shortcut-icon ion-icon{font-size:26px}:host .institution-shortcut strong{font-size:17px}:host .institution-shortcut>span:last-child{font-size:14px}}
+@media(max-width:600px){:host .institution-main--home .page-content{padding:18px 16px 24px}:host .institution-home-heading{gap:12px}:host .institution-home-mark{width:48px;height:48px}:host .institution-home-mark ion-icon{font-size:32px}:host .institution-home-heading h1{font-size:22px}:host .institution-home-heading p{font-size:13px}:host .institution-shortcut-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px}:host .institution-shortcut{min-height:102px;padding:13px}:host .institution-shortcut strong{font-size:14px}:host .institution-shortcut>span:last-child{font-size:12px}}

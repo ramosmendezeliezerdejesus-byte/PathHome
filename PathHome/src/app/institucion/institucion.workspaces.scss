@@ -1,0 +1,26 @@
+:host .institution-welcome{position:relative;display:flex;min-height:92px;align-items:center;justify-content:space-between;overflow:hidden;margin:0 0 15px;padding:18px 24px;border:1px solid #e2e5fb;border-radius:18px;background:linear-gradient(100deg,#eee9ff,#e7efff);color:#202968}
+:host .institution-welcome strong{font-size:18px;font-weight:900}:host .institution-welcome p{margin:4px 0 0;font-size:12px}
+:host .welcome-decoration{position:absolute;right:38px;bottom:-32px;color:#ab8be0;font-size:120px;opacity:.22;pointer-events:none}
+:host .institution-metrics{margin-bottom:16px}
+:host .institution-dashboard-extras{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);align-items:start;gap:14px;margin-top:18px}
+:host .home-tool-stack{display:grid;gap:14px;min-width:0}
+:host .institution-panel.home-quick-actions{padding:13px}
+:host .quick-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+:host .quick-action-grid button{display:grid;min-height:70px;align-content:center;justify-items:center;gap:6px;padding:8px;border:1px solid #e5e8fa;border-radius:12px;background:#f8f7ff;color:#4d5485;font:inherit;font-size:10px;font-weight:800;text-align:center;cursor:pointer}
+:host .quick-action-grid ion-icon{color:#7564e8;font-size:21px}
+:host .institution-subnav{display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;padding:5px;border-radius:14px;background:#f0eff8}
+:host .institution-subnav button{flex:none;min-height:34px;padding:0 16px;border:0;border-radius:11px;background:transparent;color:#73799e;font:inherit;font-size:11px;font-weight:750;cursor:pointer}
+:host .institution-subnav button.active{background:#7865e9;color:#fff;box-shadow:0 3px 8px #7564e833}
+:host .appointment-scheduler{margin:0 0 18px;padding:15px}
+:host .appointment-scheduler .institution-form{margin-top:10px}
+:host .institution-subheading{margin:14px 0 10px;color:#252d68;font-size:16px;font-weight:850}
+:host .report-stage-panel,:host .case-subsection-panel{padding:16px}
+:host .report-stage{display:grid;gap:5px;margin:12px 0;color:#515b91;font-size:11px}
+:host .report-stage-track{height:9px;overflow:hidden;border-radius:9px;background:#eef0f6}
+:host .report-stage-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#78c5dc,#8acb9a)}
+:host .empty-demo-state{margin:12px 0;padding:16px;border-radius:12px;background:#f7f6fc;color:#7a82a8;font-size:12px;line-height:1.6}
+:host .case-subsection-panel .registered-child{min-height:58px;padding:8px 4px}
+:host .institution-main:not(.institution-main--home) .page-content{width:min(100%,1440px);margin:0 auto}
+@media(max-width:1180px){:host .institution-dashboard-extras{grid-template-columns:minmax(0,1fr)}:host .home-tool-stack{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}
+@media(max-width:900px){:host .institution-main:not(.institution-main--home) .page-content{padding:16px 18px 24px}}
+@media(max-width:620px){:host .institution-welcome{min-height:76px;padding:14px 16px}:host .institution-welcome strong{font-size:15px}:host .institution-welcome p{font-size:10px}:host .welcome-decoration{right:12px;font-size:90px}:host .institution-dashboard-extras,:host .home-tool-stack{grid-template-columns:minmax(0,1fr)}:host .institution-subnav{margin-bottom:12px}:host .institution-subnav button{padding:0 12px;font-size:10px}:host .appointment-scheduler{padding:11px}:host .quick-action-grid button{min-height:62px}}
