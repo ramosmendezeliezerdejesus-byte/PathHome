@@ -4,7 +4,7 @@
       <a class="brand" href="/institucion" (click)="$event.preventDefault(); showSection('inicio')">
         <img src="assets/img/logo_login.png" alt="PathHome" />
       </a>
-      <span class="sidebar-caption">Navegación principal</span>
+      <span class="sidebar-caption">Panel institucional</span>
       <nav aria-label="Navegación institucional">
         @for (section of sections; track section.id) {
           <button type="button" [class.active]="activeNavigationSection === section.id" (click)="showSection(section.id)">
@@ -12,28 +12,97 @@
           </button>
         }
       </nav>
-      <div class="sidebar-footer"><span class="demo-mark">PH</span><span><strong>PathHome</strong><small>Vista institucional</small></span></div>
+      <div class="sidebar-footer"><span class="demo-mark">CE</span><span><strong>Cuenta institucional</strong><small>Centro de Acogida Esperanza</small></span></div>
+      <button class="sidebar-sign-out" type="button" (click)="signOut()"><ion-icon name="log-out-outline" aria-hidden="true"></ion-icon><span>Cerrar sesión</span></button>
     </aside>
 
     <main class="institution-main">
       <header class="institution-topbar">
-        <span class="topbar-title">{{ activeSection === 'inicio' ? 'Panel de institución' : sections.find(s => s.id === activeSection)?.label }}</span>
-        <span class="demo-label">Vista de demostración · sin conexión a registros reales</span>
+        <div class="topbar-organization">
+          <span class="topbar-mark"><ion-icon name="business-outline" aria-hidden="true"></ion-icon></span>
+          <span><strong class="topbar-title">Centro de Acogida Esperanza <ion-icon class="verified-mark" name="checkmark-circle-outline" aria-label="Institución verificada"></ion-icon></strong><small>{{ activeSection === 'inicio' ? 'Gestiona los casos y citas de tu institución.' : (activeSection === 'ninos' ? 'Registrar Niño, Niña o Adolescente' : sections.find(s => s.id === activeSection)?.label) }}</small></span>
+        </div>
+        <div class="topbar-tools">
+          <span class="demo-label">Vista demostrativa · datos ficticios</span>
+          <button class="topbar-notifications" type="button" [attr.aria-label]="unreadDemoNotificationCount + ' notificaciones ficticias'" (click)="showSection('notificaciones')">
+            <ion-icon name="notifications-outline" aria-hidden="true"></ion-icon>
+            @if (unreadDemoNotificationCount > 0) { <b aria-hidden="true">{{ unreadDemoNotificationCount }}</b> }
+          </button>
+          <button class="topbar-account" type="button" (click)="showSection('perfil')" aria-label="Ver perfil institucional"><span class="account-avatar">CE</span><strong>Institución</strong><ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon></button>
+        </div>
       </header>
 
       @if (activeSection === 'inicio') {
-        <section class="page-content">
-          <header class="page-heading"><img src="assets/img/img15.jpg" alt="" /><div><h1>Panel de institución</h1><p>Gestión de expedientes y procesos</p></div></header>
-          <div class="shortcut-grid">
-            <button class="shortcut blue" type="button" (click)="showSection('expedientes')"><img src="assets/img/img16.jpg" alt="" /><strong>Expedientes</strong><span>Ver y gestionar</span></button>
-            <button class="shortcut green" type="button" (click)="showSection('evaluaciones')"><img src="assets/img/img17.jpg" alt="" /><strong>Evaluaciones</strong><span>Consultar resultados</span></button>
-            <button class="shortcut yellow" type="button" (click)="showSection('citas')"><img src="assets/img/img18.jpg" alt="" /><strong>Citas</strong><span>Organizar agenda</span></button>
-            <button class="shortcut lavender" type="button" (click)="showSection('reportes')"><img src="assets/img/img19.jpg" alt="" /><strong>Reportes</strong><span>Consultar resumen</span></button>
+        <section class="page-content institution-dashboard">
+          <div class="institution-metrics" aria-label="Resumen de demostración">
+            <article class="institution-metric blue"><span class="metric-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><strong>48</strong><span>Niños a Cargo</span></article>
+            <article class="institution-metric green"><span class="metric-icon"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon></span><strong>12</strong><span>Citas Pendientes</span></article>
+            <article class="institution-metric yellow"><span class="metric-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span><strong>20</strong><span>En Seguimiento</span></article>
           </div>
-          <div class="section-title"><h2>Últimos expedientes</h2><button type="button" (click)="showSection('expedientes')">Ver todos →</button></div>
-          <div class="case-list">
-            <article class="case-row"><span class="case-icon blue"><ion-icon name="folder-outline"></ion-icon></span><div><strong>Expediente de demostración 01</strong><p>Documentación · ejemplo local</p></div><span class="status pending">En revisión</span><span class="arrow">›</span></article>
-            <article class="case-row"><span class="case-icon green"><ion-icon name="folder-outline"></ion-icon></span><div><strong>Expediente de demostración 02</strong><p>Evaluación · ejemplo local</p></div><span class="status progress">En curso</span><span class="arrow">›</span></article>
+
+          <div class="institution-dashboard-grid">
+            <section class="institution-panel children-panel" aria-labelledby="children-title">
+              <div class="section-title"><h1 id="children-title">Niños y Adolescentes</h1><button type="button" (click)="showSection('ninos')">Ver todos <span aria-hidden="true">→</span></button></div>
+              <div class="children-table" role="table" aria-label="Niños a cargo de demostración">
+                <div class="children-table-head" role="row"><span role="columnheader">Nombre</span><span role="columnheader">Edad</span><span role="columnheader">Estado</span><span role="columnheader">Acciones</span></div>
+                @for (child of dashboardChildren; track child.profile) {
+                  <button class="children-table-row" type="button" role="row" [attr.aria-label]="'Ver perfil demostrativo ' + child.profile" (click)="openChildProfile(child)">
+                    <span class="child-identity" role="cell"><span [class]="'child-avatar ' + child.tone">@if (child.photo) { <img [src]="child.photo" alt="" /> } @else { <ion-icon name="person-outline" aria-hidden="true"></ion-icon> }</span><span><strong>{{ child.type }} · {{ child.profile }}</strong><small>Perfil protegido</small></span></span>
+                    <span role="cell">{{ child.age }}</span><span role="cell"><i class="status-dot" [class.waiting]="child.status === 'Cita pendiente'"></i><span class="child-status" [class.appointment-status]="child.status === 'Cita pendiente'">{{ child.status }}</span></span><span class="row-action" role="cell" aria-label="Abrir expediente de demostración"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon></span>
+                  </button>
+                }
+              </div>
+              <p class="panel-footnote">Datos de ejemplo · la información real solo se muestra a personal autorizado.</p>
+            </section>
+
+            <section class="institution-panel appointments-panel" aria-labelledby="appointments-title">
+              <div class="section-title"><h2 id="appointments-title">Próximas Citas</h2><button type="button" (click)="showSection('citas')">Ver calendario <span aria-hidden="true">→</span></button></div>
+              @for (appointment of demoAppointments; track appointment.id) {
+                <button class="appointment-row" type="button" [class.selected]="selectedAppointment?.id === appointment.id" (click)="openAppointmentDetails(appointment)">
+                  <span class="appointment-date"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon></span>
+                  <span><strong>{{ appointment.date }} · {{ appointment.time }}</strong><small>Fecha ficticia · {{ appointment.family }}</small></span>
+                </button>
+              }
+              @if (selectedAppointment) {
+                <article class="appointment-detail demo-detail"><strong>{{ selectedAppointment.title }}</strong><span>ID {{ selectedAppointment.id }} · Expediente {{ selectedAppointment.caseId }}</span><small>{{ selectedAppointment.location }}</small><button class="appointment-detail-close" type="button" (click)="selectedAppointment = null">Cerrar detalle</button></article>
+              }
+              <button class="panel-action" type="button" (click)="showSection('citas')"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon> Consultar agenda <span aria-hidden="true">›</span></button>
+            </section>
+          </div>
+        </section>
+      }
+
+      @if (activeSection === 'ninos') {
+        <section class="page-content child-registration-page">
+          <header class="section-heading section-heading-action"><div><h1>Registrar Niño, Niña o Adolescente</h1><p>Completa la información del perfil de forma segura.</p></div><span class="privacy-label"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Registro protegido</span></header>
+          <div class="child-registration-grid">
+            <section class="institution-panel registration-panel" aria-label="Formulario de registro">
+              <div class="registration-heading"><span><ion-icon name="add-outline" aria-hidden="true"></ion-icon></span><div><h2>Nuevo perfil</h2><p>Los campos con * son obligatorios</p></div></div>
+              <form id="child-registration-form" class="child-form-layout" novalidate (submit)="validateDemoForm($event, 'el perfil de ejemplo')">
+                <label class="photo-upload" for="child-photo">
+                  <input id="child-photo" type="file" accept="image/jpeg,image/png" disabled />
+                  <ion-icon name="camera-outline" aria-hidden="true"></ion-icon><strong>Foto no disponible</strong><span>Vista de demostración</span>
+                </label>
+                <div class="child-form-fields">
+                  <label><span>Nombre(s) <b>*</b></span><input name="name" type="text" placeholder="Ej: María José" required minlength="2" autocomplete="off" /></label>
+                  <label><span>Edad <b>*</b></span><select name="age" aria-label="Edad" required><option value="">Ej: 8 años</option><option>6 años</option><option>7 años</option><option>8 años</option><option>9 años</option><option>10 años</option></select></label>
+                  <label><span>Género <b>*</b></span><select name="gender" aria-label="Género" required><option value="">Seleccionar...</option><option>Niña</option><option>Niño</option></select></label>
+                  <label><span>Institución responsable <b>*</b></span><select name="institution" aria-label="Institución responsable" required><option value="">Seleccionar institución</option><option>Centro de Acogida Esperanza</option></select></label>
+                  <label class="full-field"><span>Descripción breve</span><textarea rows="2" placeholder="Describe sus características (opcional)..."></textarea></label>
+                </div>
+              </form>
+              <div class="registration-actions"><span class="demo-save-notice" role="status">{{ demoNotice || 'Demostración: los datos no se guardan ni se envían.' }}</span><button class="secondary-button" type="button" (click)="showSection('inicio')">Cancelar</button><button class="primary-button" type="submit" form="child-registration-form">Validar datos</button></div>
+            </section>
+
+            <aside class="institution-panel registered-panel" aria-labelledby="registered-title">
+              <div class="section-title"><h2 id="registered-title">Perfiles de ejemplo</h2><span class="demo-action-label">{{ demoChildren.length }} ficticios</span></div>
+              <div class="registered-list">
+                @for (child of demoChildren; track child.profile) {
+                  <button class="registered-child" type="button" (click)="openChildProfile(child)" [attr.aria-label]="'Abrir perfil de demostración ' + child.profile"><span [class]="'registered-avatar ' + child.tone">@if (child.photo) { <img [src]="child.photo" alt="" /> } @else { <ion-icon name="person-outline" aria-hidden="true"></ion-icon> }</span><span class="registered-child-copy"><strong>{{ child.type }} · {{ child.age }}</strong><small>Perfil: {{ child.profile }}</small></span><i aria-hidden="true"></i></button>
+                }
+              </div>
+              <div class="privacy-card"><span><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon></span><div><strong>Información protegida</strong><p>Solo personal autorizado puede acceder.</p></div></div>
+            </aside>
           </div>
         </section>
       }
@@ -41,16 +110,55 @@
       @if (activeSection === 'expedientes') {
         <section class="page-content">
           <header class="section-heading section-heading-action"><div><h1>Expedientes</h1><p>Resumen visual de expedientes de demostración.</p></div><button type="button" (click)="showSection('nuevoexp')">＋ Nuevo expediente</button></header>
-          <div class="table-card"><div class="table-heading"><strong>Expedientes registrados</strong><span>Solo ejemplos locales</span></div><article class="case-row"><span class="case-icon blue"><ion-icon name="folder-outline"></ion-icon></span><div><strong>Expediente de demostración 01</strong><p>Etapa de documentación</p></div><span class="status pending">En revisión</span><button class="arrow" type="button" aria-label="Abrir expediente" (click)="showSection('detalle')">›</button></article><article class="case-row"><span class="case-icon green"><ion-icon name="folder-outline"></ion-icon></span><div><strong>Expediente de demostración 02</strong><p>Etapa de evaluación</p></div><span class="status progress">En curso</span><button class="arrow" type="button" aria-label="Abrir expediente" (click)="showSection('detalle')">›</button></article></div>
+          <div class="table-card">
+            <div class="table-heading"><strong>Expedientes de ejemplo</strong><span>Datos ficticios · sin conexión a registros reales</span></div>
+            @for (record of demoCases; track record.id) {
+              <article class="case-row"><span class="case-icon blue"><ion-icon name="folder-outline"></ion-icon></span><div><strong>{{ record.id }}</strong><p>{{ record.family }} · {{ record.stage }}</p></div><span class="status" [class.pending]="record.status === 'En revisión'" [class.progress]="record.status === 'En curso'">{{ record.status }}</span><button class="arrow" type="button" [attr.aria-label]="'Ver expediente ' + record.id" (click)="openCaseDetails(record)">›</button></article>
+            }
+          </div>
         </section>
       }
 
       @if (activeSection === 'evaluaciones') {
-        <section class="page-content"><header class="section-heading"><h1>Evaluaciones</h1><p>Estado de evaluaciones · datos de demostración.</p></header><div class="summary-grid"><article class="summary-card lavender"><strong>1</strong><span>Pendientes de revisión</span></article><article class="summary-card green"><strong>1</strong><span>Registradas</span></article></div><div class="table-card"><article class="case-row"><span class="case-icon lavender"><ion-icon name="document-text-outline"></ion-icon></span><div><strong>Evaluación psicológica</strong><p>Expediente de demostración 01</p></div><span class="status pending">Pendiente</span></article><article class="case-row"><span class="case-icon green"><ion-icon name="document-text-outline"></ion-icon></span><div><strong>Evaluación registrada</strong><p>Expediente de demostración 02</p></div><span class="status complete">Registrada</span></article></div></section>
+        <section class="page-content">
+          <header class="section-heading"><h1>Evaluaciones</h1><p>Estado de evaluaciones · datos de demostración.</p></header>
+          @if (selectedEvaluation) {
+            <article class="case-detail-card"><span class="case-icon lavender"><ion-icon name="document-text-outline"></ion-icon></span><div><strong>{{ selectedEvaluation.title }}</strong><p>{{ selectedEvaluation.id }} · Expediente {{ selectedEvaluation.caseId }} · {{ selectedEvaluation.date }}</p></div><span class="status" [class.pending]="selectedEvaluation.status === 'Pendiente'" [class.complete]="selectedEvaluation.status === 'Registrada'">{{ selectedEvaluation.status }}</span></article>
+            <button class="secondary-button section-return" type="button" (click)="selectedEvaluation = null">Volver a evaluaciones</button>
+          } @else {
+            <div class="summary-grid"><article class="summary-card lavender"><strong>1</strong><span>Pendientes de revisión</span></article><article class="summary-card green"><strong>1</strong><span>Registradas</span></article></div>
+            <div class="table-card">
+              @for (evaluation of demoEvaluations; track evaluation.id) {
+                <article class="case-row"><span class="case-icon lavender"><ion-icon name="document-text-outline"></ion-icon></span><div><strong>{{ evaluation.title }}</strong><p>{{ evaluation.id }} · Expediente {{ evaluation.caseId }}</p></div><span class="status" [class.pending]="evaluation.status === 'Pendiente'" [class.complete]="evaluation.status === 'Registrada'">{{ evaluation.status }}</span><button class="arrow" type="button" [attr.aria-label]="'Ver evaluación ' + evaluation.id" (click)="openEvaluationDetails(evaluation)">›</button></article>
+              }
+            </div>
+          }
+        </section>
       }
 
       @if (activeSection === 'citas') {
-        <section class="page-content"><header class="section-heading"><h1>Citas</h1><p>Agenda institucional · contenido de demostración.</p></header><div class="table-card"><div class="table-heading"><strong>Próximas citas</strong><span>Sin reservas reales</span></div><article class="case-row"><span class="case-icon yellow"><ion-icon name="calendar-outline"></ion-icon></span><div><strong>Entrevista inicial</strong><p>Expediente de demostración 01 · fecha por confirmar</p></div><span class="status pending">Pendiente</span></article><article class="case-row"><span class="case-icon blue"><ion-icon name="calendar-outline"></ion-icon></span><div><strong>Reunión de seguimiento</strong><p>Expediente de demostración 02 · fecha por confirmar</p></div><span class="status progress">Programada</span></article></div></section>
+        <section class="page-content"><header class="section-heading"><h1>Citas</h1><p>Agenda institucional · fechas y datos ficticios.</p></header>
+          <div class="table-card"><div class="table-heading"><strong>Citas de ejemplo</strong><span>Sin reservas reales</span></div>
+            @for (appointment of demoAppointments; track appointment.id) {
+              <article class="case-row"><span class="case-icon yellow"><ion-icon name="calendar-outline"></ion-icon></span><div><strong>{{ appointment.title }}</strong><p>{{ appointment.date }} · {{ appointment.time }} · {{ appointment.family }}</p></div><span class="status pending">Ficticia</span><button class="arrow" type="button" [attr.aria-label]="'Ver cita ' + appointment.id" (click)="openAppointmentDetails(appointment)">›</button></article>
+            }
+          </div>
+          @if (selectedAppointment) {
+            <article class="case-detail-card appointment-detail"><span class="case-icon blue"><ion-icon name="calendar-outline"></ion-icon></span><div><strong>{{ selectedAppointment.title }} · {{ selectedAppointment.id }}</strong><p>{{ selectedAppointment.date }} · {{ selectedAppointment.time }} · {{ selectedAppointment.location }}</p><small>{{ selectedAppointment.family }} · Expediente {{ selectedAppointment.caseId }} · fecha ficticia</small></div><button class="section-back" type="button" aria-label="Cerrar detalle de cita" (click)="selectedAppointment = null">×</button></article>
+          }
+        </section>
+      }
+
+      @if (activeSection === 'notificaciones') {
+        <section class="page-content">
+          <header class="section-heading section-heading-action"><div><h1>Notificaciones</h1><p>Avisos de ejemplo · no corresponden a eventos reales.</p></div><button type="button" [disabled]="unreadDemoNotificationCount === 0" (click)="markAllDemoNotificationsRead()">Marcar todas como leídas</button></header>
+          <p class="demo-save-notice" role="status">{{ demoNotice || 'Los cambios de lectura solo se reflejan temporalmente en esta vista.' }}</p>
+          <div class="notification-list">
+            @for (notification of demoNotifications; track notification.id) {
+              <article class="notification-card" [class.is-read]="readNotificationIds.has(notification.id)"><span class="case-icon blue"><ion-icon [name]="notification.icon" aria-hidden="true"></ion-icon></span><div><strong>{{ notification.title }}</strong><p>{{ notification.message }}</p><small>{{ notification.id }} · {{ notification.category }} · {{ notification.time }}</small></div><button type="button" [disabled]="readNotificationIds.has(notification.id)" (click)="markDemoNotificationRead(notification.id)">{{ readNotificationIds.has(notification.id) ? 'Leída' : 'Marcar leída' }}</button></article>
+            }
+          </div>
+        </section>
       }
 
       @if (activeSection === 'reportes') {
@@ -62,30 +170,60 @@
       }
 
       @if (activeSection === 'detalle') {
-        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver a expedientes" (click)="showSection('expedientes')">‹</button><div><h1>Detalle del expediente</h1><p>Expediente de demostración 01 · datos de ejemplo</p></div></header>
-          <article class="case-detail-card"><span class="case-icon blue"><ion-icon name="folder-outline"></ion-icon></span><div><strong>Expediente de demostración 01</strong><p>Etapa actual · Documentación</p></div><span class="status pending">En revisión</span></article>
-          <div class="workflow-actions"><button type="button" (click)="showSection('familia')"><ion-icon name="person-outline"></ion-icon><span>Datos de la familia</span><b>›</b></button><button type="button" (click)="showSection('nino')"><ion-icon name="person-outline"></ion-icon><span>Información del niño</span><b>›</b></button><button type="button" (click)="showSection('estudio')"><ion-icon name="document-text-outline"></ion-icon><span>Estudio social</span><b>›</b></button><button type="button" (click)="showSection('entrevista')"><ion-icon name="calendar-outline"></ion-icon><span>Entrevistas</span><b>›</b></button><button type="button" (click)="showSection('historial')"><ion-icon name="document-text-outline"></ion-icon><span>Historial del expediente</span><b>›</b></button></div>
+        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver a expedientes" (click)="showSection('expedientes')">‹</button><div><h1>Detalle del expediente</h1><p>Información ficticia · sin conexión a registros reales</p></div></header>
+          <article class="case-detail-card"><span class="case-icon blue"><ion-icon name="folder-outline"></ion-icon></span><div><strong>{{ selectedCase?.id || demoCases[0].id }}</strong><p>{{ selectedCase?.family || demoCases[0].family }} · Etapa actual: {{ selectedCase?.stage || demoCases[0].stage }}</p></div><span class="status pending">{{ selectedCase?.status || demoCases[0].status }}</span></article>
+          @if (demoNotice) { <p class="demo-save-notice" role="status">{{ demoNotice }}</p> }
+          <div class="workflow-actions"><button type="button" (click)="showSection('familia')"><ion-icon name="person-outline"></ion-icon><span>Datos de la familia</span><b>›</b></button><button type="button" (click)="openCaseChildProfile()"><ion-icon name="person-outline"></ion-icon><span>Información del niño</span><b>›</b></button><button type="button" (click)="showSection('estudio')"><ion-icon name="document-text-outline"></ion-icon><span>Estudio social</span><b>›</b></button><button type="button" (click)="showSection('entrevista')"><ion-icon name="calendar-outline"></ion-icon><span>Entrevistas</span><b>›</b></button><button type="button" (click)="showSection('historial')"><ion-icon name="document-text-outline"></ion-icon><span>Historial del expediente</span><b>›</b></button></div>
         </section>
       }
 
       @if (activeSection === 'nuevoexp') {
-        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver a expedientes" (click)="showSection('expedientes')">‹</button><div><h1>Crear expediente</h1><p>Registro visual · sin guardar datos</p></div></header><form class="institution-form"><label><span>Nombre de la familia</span><input disabled placeholder="Nombre completo" /></label><label><span>Documento de identidad</span><input disabled placeholder="000-0000000-0" /></label><label><span>Correo electrónico</span><input disabled placeholder="correo@ejemplo.com" /></label><label><span>Teléfono</span><input disabled placeholder="000 000 0000" /></label><label class="full-field"><span>Dirección</span><input disabled placeholder="Dirección de residencia" /></label><button type="button" disabled>Crear expediente</button></form></section>
+        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Cancelar y volver a expedientes" (click)="showSection('expedientes')">‹</button><div><h1>Crear expediente de ejemplo</h1><p>La validación es local; el formulario no guarda ni envía información.</p></div></header>
+          <form class="institution-form" novalidate (submit)="validateDemoForm($event, 'el expediente')">
+            <label><span>Nombre de la familia *</span><input name="family" required minlength="2" placeholder="Nombre de ejemplo" autocomplete="off" /></label>
+            <label><span>Documento de identidad de ejemplo *</span><input name="identity" required minlength="5" placeholder="ID-DEMO-0001" autocomplete="off" /></label>
+            <label><span>Correo electrónico *</span><input name="email" type="email" required placeholder="familia@ejemplo.test" autocomplete="off" /></label>
+            <label><span>Teléfono *</span><input name="phone" type="tel" required pattern="[0-9+() -]{7,20}" placeholder="000 000 0000" autocomplete="off" /></label>
+            <label class="full-field"><span>Dirección de ejemplo *</span><input name="address" required minlength="4" placeholder="Dirección ficticia" autocomplete="off" /></label>
+            <div class="form-actions"><span class="demo-save-notice" role="status">{{ demoNotice || 'No se crearán registros reales.' }}</span><button class="secondary-button" type="button" (click)="showSection('expedientes')">Cancelar</button><button type="submit">Validar datos</button></div>
+          </form>
+        </section>
       }
 
       @if (activeSection === 'familia') {
-        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver al expediente" (click)="showSection('detalle')">‹</button><div><h1>Datos de la familia</h1><p>Expediente de demostración 01</p></div></header><form class="institution-form"><label><span>Nombre completo</span><input disabled value="Familia de demostración" /></label><label><span>Documento de identidad</span><input disabled placeholder="No disponible" /></label><label><span>Teléfono</span><input disabled placeholder="No disponible" /></label><label class="full-field"><span>Dirección</span><input disabled placeholder="No disponible" /></label></form></section>
+        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver al expediente" (click)="showSection('detalle')">‹</button><div><h1>Datos de la familia</h1><p>Expediente {{ selectedCase?.id || demoCases[0].id }} · información ficticia</p></div></header><form class="institution-form"><label><span>Nombre</span><input readonly [value]="selectedCase?.family || demoCases[0].family" /></label><label><span>Identificador de demostración</span><input readonly [value]="'FAM-' + (selectedCase?.id || demoCases[0].id)" /></label><label><span>Documento</span><input readonly value="No disponible en demostración" /></label><label><span>Teléfono</span><input readonly value="No disponible en demostración" /></label></form></section>
       }
 
       @if (activeSection === 'nino') {
-        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver al expediente" (click)="showSection('detalle')">‹</button><div><h1>Información del niño</h1><p>Datos protegidos · expediente de demostración</p></div></header><article class="privacy-card"><span><ion-icon name="document-text-outline"></ion-icon></span><div><strong>Información protegida</strong><p>Los datos personales de niños, niñas y adolescentes se muestran únicamente con autorización del personal correspondiente.</p></div></article></section>
+        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver a la pantalla anterior" (click)="showSection(childReturnSection)">‹</button><div><h1>Perfil protegido de demostración</h1><p>Identificación anónima · no corresponde a una persona real.</p></div></header>
+          <article class="case-detail-card"><span class="case-icon blue"><ion-icon name="person-outline"></ion-icon></span><div><strong>{{ selectedChild?.type || demoChildren[0].type }} · {{ selectedChild?.profile || demoChildren[0].profile }}</strong><p>Edad de ejemplo: {{ selectedChild?.age || demoChildren[0].age }} · Estado: {{ selectedChild?.status || demoChildren[0].status }}</p><small>Expediente demostrativo relacionado: {{ selectedChild?.caseId || demoChildren[0].caseId }}</small></div><span class="status progress">Perfil ficticio</span></article>
+          <article class="privacy-card"><span><ion-icon name="shield-checkmark-outline"></ion-icon></span><div><strong>Información protegida</strong><p>Este perfil usa solo un identificador y datos de ejemplo. No contiene información personal real.</p></div></article>
+        </section>
       }
 
       @if (activeSection === 'estudio') {
-        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver al expediente" (click)="showSection('detalle')">‹</button><div><h1>Estudio social</h1><p>Registro visual · expediente de demostración 01</p></div></header><form class="institution-form"><label><span>Fecha de la visita</span><input type="date" disabled /></label><label><span>Condiciones de vivienda</span><select disabled><option>Seleccionar estado</option></select></label><label><span>Situación económica</span><select disabled><option>Seleccionar estado</option></select></label><label><span>Resultado</span><select disabled><option>Seleccionar resultado</option></select></label><label class="full-field"><span>Entorno familiar y observaciones</span><textarea rows="4" disabled></textarea></label><button type="button" disabled>Guardar estudio social</button></form></section>
+        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver al expediente" (click)="showSection('detalle')">‹</button><div><h1>Estudio social</h1><p>Expediente {{ selectedCase?.id || demoCases[0].id }} · solo validación demostrativa</p></div></header>
+          <form class="institution-form" novalidate (submit)="validateDemoForm($event, 'el estudio social')">
+            <label><span>Fecha de la visita *</span><input name="visitDate" type="date" required /></label>
+            <label><span>Condiciones de vivienda *</span><select name="housing" required><option value="">Seleccionar estado</option><option>Adecuadas · ejemplo</option><option>Requiere seguimiento · ejemplo</option></select></label>
+            <label><span>Situación económica *</span><select name="economy" required><option value="">Seleccionar estado</option><option>Estable · ejemplo</option><option>Requiere apoyo · ejemplo</option></select></label>
+            <label><span>Resultado *</span><select name="result" required><option value="">Seleccionar resultado</option><option>Seguimiento · ejemplo</option><option>Completo · ejemplo</option></select></label>
+            <label class="full-field"><span>Entorno familiar y observaciones *</span><textarea name="notes" rows="4" required minlength="5" placeholder="Escribe observaciones ficticias para validar el formulario."></textarea></label>
+            <div class="form-actions"><span class="demo-save-notice" role="status">{{ demoNotice || 'La validación no guarda el estudio.' }}</span><button class="secondary-button" type="button" (click)="showSection('detalle')">Cancelar</button><button type="submit">Validar estudio</button></div>
+          </form>
+        </section>
       }
 
       @if (activeSection === 'entrevista') {
-        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver al expediente" (click)="showSection('detalle')">‹</button><div><h1>Registro de entrevistas</h1><p>Registro visual · expediente de demostración 01</p></div></header><form class="institution-form"><label><span>Tipo de entrevista</span><select disabled><option>Entrevista inicial</option></select></label><label><span>Fecha</span><input type="date" disabled /></label><label><span>Resultado</span><select disabled><option>Seleccionar resultado</option></select></label><label class="full-field"><span>Observaciones</span><textarea rows="4" disabled></textarea></label><button type="button" disabled>Registrar entrevista</button></form></section>
+        <section class="page-content"><header class="section-heading"><button class="section-back" type="button" aria-label="Volver al expediente" (click)="showSection('detalle')">‹</button><div><h1>Registro de entrevistas</h1><p>Expediente {{ selectedCase?.id || demoCases[0].id }} · solo validación demostrativa</p></div></header>
+          <form class="institution-form" novalidate (submit)="validateDemoForm($event, 'la entrevista')">
+            <label><span>Tipo de entrevista *</span><select name="interviewType" required><option value="">Seleccionar tipo</option><option>Entrevista inicial · ejemplo</option><option>Seguimiento · ejemplo</option></select></label>
+            <label><span>Fecha ficticia *</span><input name="interviewDate" type="date" required /></label>
+            <label><span>Resultado *</span><select name="interviewResult" required><option value="">Seleccionar resultado</option><option>Pendiente · ejemplo</option><option>Completada · ejemplo</option></select></label>
+            <label class="full-field"><span>Observaciones de ejemplo *</span><textarea name="interviewNotes" rows="4" required minlength="5" placeholder="Escribe observaciones ficticias para validar el formulario."></textarea></label>
+            <div class="form-actions"><span class="demo-save-notice" role="status">{{ demoNotice || 'La validación no registra la entrevista.' }}</span><button class="secondary-button" type="button" (click)="showSection('detalle')">Cancelar</button><button type="submit">Validar entrevista</button></div>
+          </form>
+        </section>
       }
 
       @if (activeSection === 'historial') {
