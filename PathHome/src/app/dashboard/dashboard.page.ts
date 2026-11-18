@@ -7,6 +7,8 @@ import { FormsModule } from '@angular/forms';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { SupabaseService } from '../core/supabase/supabase.service';
 import type { FamilyAppointment, FamilyNotification, FamilyOutcome } from '../core/supabase/supabase.service';
+import { FamilyNavigationComponent } from '../shared/family-navigation/family-navigation.component';
+import type { FamilyDashboardSection } from '../shared/family-navigation/family-navigation.component';
 import { addIcons } from 'ionicons';
 import {
   calendarOutline, checkmarkCircleOutline, chatbubbleEllipsesOutline, documentTextOutline,
@@ -14,7 +16,7 @@ import {
   lockClosedOutline, logOutOutline, notificationsOutline, personOutline, settingsOutline,
 } from 'ionicons/icons';
 
-type DashboardSection = 'inicio' | 'proceso' | 'documentos' | 'citas' | 'notificaciones' | 'perfil' | 'mas' | 'asistente' | 'mensajes' | 'hogar' | 'solicitud' | 'menor' | 'seguimiento' | 'datos' | 'seguridad' | 'preferencias' | 'ayuda' | 'informacion' | 'terminos';
+type DashboardSection = FamilyDashboardSection;
 type NotificationFilter = 'Todas' | 'Citas' | 'Documentos' | 'Sistema';
 type DocumentTab = 'requeridos' | 'subidos';
 type AppointmentTab = 'proximas' | 'historial';
@@ -40,7 +42,7 @@ interface AssistantMessage {
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.scss'],
   standalone: true,
-  imports: [IonContent, IonIcon, FormsModule],
+  imports: [IonContent, IonIcon, FormsModule, FamilyNavigationComponent],
 })
 export class DashboardPage implements OnDestroy {
   activeSection: DashboardSection = 'inicio';
@@ -154,9 +156,34 @@ export class DashboardPage implements OnDestroy {
   }
 
   ionViewWillEnter(): void {
+    this.applyCatalogNavigationIntent();
     void this.loadDashboardData();
     void this.loadNotifications();
     void this.subscribeToFamilyNotifications();
+  }
+
+  private applyCatalogNavigationIntent(): void {
+    const state = window.history.state as Record<string, unknown> | null;
+    if (!state) return;
+
+    const requestedSection = state['familyDashboardSection'];
+    const requestedAction = state['familyDashboardAction'];
+    if (!requestedSection && requestedAction !== 'confirm-sign-out') return;
+
+    const nextState = { ...state };
+    delete nextState['familyDashboardSection'];
+    delete nextState['familyDashboardAction'];
+    window.history.replaceState(nextState, '', window.location.href);
+
+    const validSections: DashboardSection[] = [
+      'inicio', 'proceso', 'documentos', 'citas', 'notificaciones', 'perfil', 'mas', 'asistente',
+      'mensajes', 'hogar', 'solicitud', 'menor', 'seguimiento', 'datos', 'seguridad', 'preferencias',
+      'ayuda', 'informacion', 'terminos',
+    ];
+    if (typeof requestedSection === 'string' && validSections.includes(requestedSection as DashboardSection)) {
+      this.showSection(requestedSection as DashboardSection);
+    }
+    if (requestedAction === 'confirm-sign-out') void this.confirmSignOut();
   }
 
   ngOnDestroy(): void {

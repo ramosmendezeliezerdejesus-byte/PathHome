@@ -1,0 +1,36 @@
+<header class="family-mobile-topbar">
+  <button class="family-brand" type="button" aria-label="PathHome, inicio" (click)="selectSection('inicio')">
+    <img src="/assets/img/logo_splash.png" alt=""><span>PathHome</span>
+  </button>
+  <button type="button" class="family-menu-toggle" [attr.aria-expanded]="mobileMenuOpen" aria-controls="family-navigation" [attr.aria-label]="mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'" (click)="menuToggleRequested.emit()">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="mobileMenuOpen ? 'M6 6l12 12M18 6L6 18' : 'M4 6h16M4 12h16M4 18h16'"></path></svg>
+  </button>
+</header>
+
+@if (mobileMenuOpen) {
+  <button type="button" class="family-menu-backdrop" aria-label="Cerrar menú" (click)="menuToggleRequested.emit()"></button>
+}
+
+<aside class="family-mobile-menu" [class.open]="mobileMenuOpen" aria-label="Navegación familiar">
+  <button class="family-menu-brand" type="button" aria-label="PathHome, inicio" (click)="selectSection('inicio')">
+    <img src="/assets/img/logo_splash.png" alt=""><span>PathHome</span>
+  </button>
+  <nav id="family-navigation" aria-label="Secciones del panel familiar">
+    <button type="button" [class.active]="primarySection === 'inicio'" (click)="selectSection('inicio')"><ion-icon name="home-outline" aria-hidden="true"></ion-icon><span>Inicio</span></button>
+    <button type="button" [class.active]="primarySection === 'proceso'" (click)="selectSection('proceso')"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span>Mi proceso</span></button>
+    <button type="button" [class.active]="activeSection === 'asistente'" (click)="selectSection('asistente')"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon><span>Asistente virtual</span></button>
+    <button type="button" [class.active]="primarySection === 'notificaciones'" (click)="selectSection('notificaciones')"><ion-icon name="notifications-outline" aria-hidden="true"></ion-icon><span>Notificaciones</span>@if (unreadCount) { <b>{{ unreadCount }}</b> }</button>
+    <button type="button" [class.active]="primarySection === 'perfil'" (click)="selectSection('perfil')"><ion-icon name="person-outline" aria-hidden="true"></ion-icon><span>Perfil</span></button>
+    <button type="button" [class.active]="activeSection === 'mas'" (click)="selectSection('mas')"><ion-icon name="grid-outline" aria-hidden="true"></ion-icon><span>Más opciones</span></button>
+  </nav>
+  <button class="family-menu-logout" type="button" (click)="logoutRequested.emit()"><ion-icon name="log-out-outline" aria-hidden="true"></ion-icon><span>Cerrar sesión</span></button>
+</aside>
+
+@if (showBottomNav) {
+  <nav class="bottom-nav" aria-label="Navegación del panel familiar">
+    <button type="button" [class.nav-active]="primarySection === 'inicio'" [attr.aria-current]="primarySection === 'inicio' ? 'page' : null" (click)="selectSection('inicio')"><ion-icon name="home-outline" aria-hidden="true"></ion-icon><span>Inicio</span></button>
+    <button type="button" [class.nav-active]="primarySection === 'proceso'" [attr.aria-current]="primarySection === 'proceso' ? 'page' : null" (click)="selectSection('proceso')"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span>Mi proceso</span></button>
+    <button type="button" [class.nav-active]="primarySection === 'notificaciones'" [attr.aria-current]="primarySection === 'notificaciones' ? 'page' : null" (click)="selectSection('notificaciones')"><ion-icon name="notifications-outline" aria-hidden="true"></ion-icon><span>Notificaciones</span>@if (unreadCount) { <b class="nav-badge">{{ unreadCount }}</b> }</button>
+    <button type="button" [class.nav-active]="primarySection === 'perfil'" [attr.aria-current]="primarySection === 'perfil' ? 'page' : null" (click)="selectSection('perfil')"><ion-icon name="person-outline" aria-hidden="true"></ion-icon><span>Perfil</span></button>
+  </nav>
+}

@@ -1,5 +1,164 @@
-<ion-content class="catalog-content">
-  <main aria-label="Catálogo">
-    <!-- Página de ejemplo: aquí se construirá el catálogo de perfiles autorizados. -->
-  </main>
+<ion-content class="catalog-content" [fullscreen]="true">
+  <div class="catalog-frame">
+    <app-family-navigation
+      activeSection="proceso"
+      primarySection="proceso"
+      [showBottomNav]="false"
+      [mobileMenuOpen]="mobileMenuOpen"
+      (sectionSelected)="navigateToDashboardSection($event)"
+      (menuToggleRequested)="toggleMobileMenu()"
+      (logoutRequested)="requestSignOut()">
+    </app-family-navigation>
+
+    <main class="catalog-shell" aria-labelledby="catalog-title">
+      <header class="catalog-header">
+        <div class="catalog-heading">
+          <p class="catalog-eyebrow">PATHHOME · FAMILIA SOLICITANTE</p>
+          <h1 id="catalog-title">Catálogo de propuestas</h1>
+          <p>Conoce las propuestas de vinculación autorizadas para tu familia.</p>
+        </div>
+        <div class="catalog-header-mark" aria-hidden="true">
+          <ion-icon name="book-outline"></ion-icon>
+        </div>
+      </header>
+
+      @if (demoModeActive) {
+        <aside class="demo-notice" role="status">
+          <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
+          <span><strong>Vista demostrativa.</strong> Los ejemplos son ficticios y no representan menores ni propuestas autorizadas.</span>
+          <button type="button" class="demo-toggle" (click)="toggleDemoProposals()">Ocultar ejemplos</button>
+        </aside>
+      } @else if (!proposals.length) {
+        <aside class="demo-notice demo-notice-muted" role="status">
+          <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
+          <span>Mostrando propuestas autorizadas. Esta vista no contiene ejemplos de demostración.</span>
+          <button type="button" class="demo-toggle" (click)="toggleDemoProposals()">Ver ejemplos visuales</button>
+        </aside>
+      }
+
+      <section class="catalog-controls" aria-label="Buscar y filtrar propuestas">
+        <label class="catalog-search">
+          <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
+          <input type="search" aria-label="Buscar propuestas" [value]="searchText" (input)="setSearch($event)" placeholder="Buscar por edad o características…" />
+          @if (searchText) {
+            <button type="button" class="clear-search" aria-label="Limpiar búsqueda" (click)="clearSearch()"><ion-icon name="close-outline" aria-hidden="true"></ion-icon></button>
+          }
+        </label>
+
+        <div class="catalog-filter-row">
+          <div class="catalog-filters" role="group" aria-label="Filtrar por género">
+            @for (option of genderOptions; track option.value) {
+              <button type="button" [class.selected]="genderFilter === option.value" [attr.aria-pressed]="genderFilter === option.value" (click)="setGenderFilter(option.value)">{{ option.label }}</button>
+            }
+          </div>
+          <label class="catalog-age-filter">
+            <span class="sr-only">Filtrar por edad</span>
+            <select aria-label="Filtrar por edad" [value]="ageFilter" (change)="setAgeFilter($event)">
+              <option value="todas">Todas las edades</option>
+              <option value="0-5">0–5 años</option>
+              <option value="6-10">6–10 años</option>
+              <option value="11-15">11–15 años</option>
+              <option value="16+">16 años o más</option>
+            </select>
+            <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+          </label>
+        </div>
+      </section>
+
+      <div class="catalog-results-heading">
+        <div>
+          <h2>Propuestas disponibles</h2>
+          <p>{{ filteredProposals.length }} {{ demoModeActive ? 'ejemplos visuales' : 'propuestas autorizadas' }}</p>
+        </div>
+        <span class="privacy-chip"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Acceso protegido</span>
+      </div>
+
+      @if (isLoading) {
+        <section class="proposal-grid" aria-label="Cargando propuestas" aria-busy="true">
+          @for (placeholder of [1, 2, 3]; track placeholder) {
+            <article class="proposal-card proposal-skeleton"><span></span><span></span><span></span><span></span></article>
+          }
+        </section>
+      } @else if (loadError) {
+        <section class="catalog-state catalog-error" role="alert">
+          <span class="state-icon"><ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon></span>
+          <h2>No se pudieron mostrar las propuestas</h2>
+          <p>{{ loadError }}</p>
+        </section>
+      } @else if (visibleProposals.length) {
+        <section class="proposal-grid" aria-label="Propuestas autorizadas">
+          @for (proposal of paginatedProposals; track proposal.id) {
+            <article [class]="'proposal-card tone-' + proposal.tone.toLowerCase()">
+              <div class="proposal-card-topline">
+                <span class="proposal-demo-badge"><ion-icon name="sparkles-outline" aria-hidden="true"></ion-icon> {{ proposal.isDemo ? 'DEMO · FICTICIO' : statusLabel(proposal.status) }}</span>
+                <button type="button" class="save-visual" aria-label="Guardar propuesta visualmente no disponible" disabled><ion-icon name="heart-outline" aria-hidden="true"></ion-icon></button>
+              </div>
+
+              <div class="proposal-portrait" aria-hidden="true">
+                <span class="portrait-halo"></span>
+                @if (proposal.photoUrl) { <img [src]="proposal.photoUrl" alt="Imagen autorizada de la propuesta" /> }
+                @else { <ion-icon name="person-outline"></ion-icon> }
+              </div>
+
+              <div class="proposal-summary">
+                <h3>{{ proposal.title }}</h3>
+                <div class="proposal-facts">
+                  @if (proposal.gender) { <span><ion-icon name="person-outline" aria-hidden="true"></ion-icon>{{ proposal.gender === 'niña' ? 'Niña' : 'Niño' }}</span> }
+                  @if (proposal.age !== null) { <span><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon>{{ proposal.age }} años</span> }
+                  @if (proposal.location) { <span><ion-icon name="location-outline" aria-hidden="true"></ion-icon>{{ proposal.location }}</span> }
+                </div>
+                @if (proposal.summary) { <p class="proposal-description">{{ proposal.summary }}</p> }
+              </div>
+
+              <button class="proposal-details-toggle" type="button" [attr.aria-expanded]="expandedProposalId === proposal.id" (click)="toggleProposalDetails(proposal.id)">
+                {{ expandedProposalId === proposal.id ? 'Ocultar detalles' : 'Consultar detalles' }}
+                <ion-icon [name]="expandedProposalId === proposal.id ? 'chevron-up-outline' : 'chevron-down-outline'" aria-hidden="true"></ion-icon>
+              </button>
+
+              @if (expandedProposalId === proposal.id) {
+                <div class="proposal-details">
+                  <strong>Información disponible</strong>
+                  <p>{{ proposal.details || 'La institución no ha agregado más información a esta propuesta.' }}</p>
+                </div>
+              }
+
+              <button type="button" class="interest-button" disabled aria-label="Expresar interés, disponible cuando exista una propuesta autorizada">
+                <ion-icon name="heart-outline" aria-hidden="true"></ion-icon> Expresar interés
+              </button>
+              @if (proposal.isDemo) { <p class="proposal-action-note">Acción no disponible en ejemplos de demostración.</p> }
+            </article>
+          }
+        </section>
+
+        @if (totalPages > 1) {
+          <nav class="catalog-pagination" aria-label="Paginación de propuestas">
+            <button type="button" aria-label="Página anterior" [disabled]="currentPage === 1" (click)="previousPage()"><ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon></button>
+            @for (page of pageNumbers; track page) {
+              <button type="button" [class.selected]="currentPage === page" [attr.aria-current]="currentPage === page ? 'page' : null" (click)="setPage(page)">{{ page }}</button>
+            }
+            <button type="button" aria-label="Página siguiente" [disabled]="currentPage === totalPages" (click)="nextPage()"><ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></button>
+          </nav>
+        }
+      } @else if (demoModeActive || proposals.length) {
+        <section class="catalog-state" role="status">
+          <span class="state-icon"><ion-icon name="search-outline" aria-hidden="true"></ion-icon></span>
+          <h2>No encontramos resultados</h2>
+          <p>Ajusta la búsqueda o los filtros para revisar otras propuestas.</p>
+          <button type="button" class="reset-filters" (click)="resetFilters()">Limpiar filtros</button>
+        </section>
+      } @else {
+        <section class="catalog-state catalog-empty" role="status">
+          <span class="state-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span>
+          <h2>Todavía no hay propuestas asignadas</h2>
+          <p>Cuando la institución autorice una propuesta para tu familia, aparecerá aquí. Este catálogo solo muestra información vinculada a tu autorización.</p>
+          <span class="empty-protection"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Tus propuestas son privadas</span>
+        </section>
+      }
+
+      <footer class="catalog-footer">
+        <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
+        <span>La información se limita a propuestas autorizadas para tu familia.</span>
+      </footer>
+    </main>
+  </div>
 </ion-content>
