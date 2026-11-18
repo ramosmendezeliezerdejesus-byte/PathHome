@@ -3,8 +3,9 @@ import { Router } from '@angular/router';
 import { IonContent, IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
-  alertCircleOutline, bookOutline, calendarOutline, chevronBackOutline, chevronDownOutline,
-  chevronForwardOutline, chevronUpOutline, closeOutline, heartOutline, informationCircleOutline,
+  alertCircleOutline, arrowBackOutline, arrowForwardOutline, bookOutline, calendarOutline,
+  chevronBackOutline, chevronDownOutline, chevronForwardOutline, closeOutline, documentTextOutline,
+  heartOutline, informationCircleOutline,
   locationOutline, lockClosedOutline, peopleOutline, personOutline, searchOutline,
   shieldCheckmarkOutline, sparklesOutline,
 } from 'ionicons/icons';
@@ -24,6 +25,9 @@ interface CatalogProposal {
   location: string | null;
   summary: string | null;
   details: string | null;
+  institution: string | null;
+  interests: string[];
+  characteristics: string[];
   photoUrl: string | null;
   status: ProposalStatus;
   isDemo: boolean;
@@ -56,7 +60,7 @@ export class CatalogPage {
   searchText = '';
   genderFilter: GenderFilter = 'todas';
   ageFilter: AgeFilter = 'todas';
-  expandedProposalId: string | null = null;
+  selectedProposalId: string | null = null;
   currentPage = 1;
   readonly pageSize = 3;
   readonly genderOptions: { value: GenderFilter; label: string }[] = [
@@ -67,8 +71,9 @@ export class CatalogPage {
 
   constructor(private readonly router: Router) {
     addIcons({
-      alertCircleOutline, bookOutline, calendarOutline, chevronBackOutline, chevronDownOutline,
-      chevronForwardOutline, chevronUpOutline, closeOutline, heartOutline, informationCircleOutline,
+      alertCircleOutline, arrowBackOutline, arrowForwardOutline, bookOutline, calendarOutline,
+      chevronBackOutline, chevronDownOutline, chevronForwardOutline, closeOutline, documentTextOutline,
+      heartOutline, informationCircleOutline,
       locationOutline, lockClosedOutline, peopleOutline, personOutline, searchOutline,
       shieldCheckmarkOutline, sparklesOutline,
     });
@@ -86,6 +91,11 @@ export class CatalogPage {
   }
 
   get visibleProposals(): CatalogProposal[] { return this.filteredProposals; }
+  get selectedProposal(): CatalogProposal | null {
+    if (!this.selectedProposalId) return null;
+    const source = this.demoModeActive ? this.demoProposals : this.proposals;
+    return source.find((proposal) => proposal.id === this.selectedProposalId) ?? null;
+  }
   get demoModeActive(): boolean { return this.showDemoProposals && this.proposals.length === 0; }
   get paginatedProposals(): CatalogProposal[] {
     const start = (this.currentPage - 1) * this.pageSize;
@@ -111,7 +121,6 @@ export class CatalogPage {
   setSearch(event: Event): void {
     this.searchText = (event.target as HTMLInputElement).value;
     this.currentPage = 1;
-    this.expandedProposalId = null;
   }
   clearSearch(): void { this.searchText = ''; this.currentPage = 1; }
   setGenderFilter(value: GenderFilter): void { this.genderFilter = value; this.currentPage = 1; }
@@ -124,18 +133,16 @@ export class CatalogPage {
     this.genderFilter = 'todas';
     this.ageFilter = 'todas';
     this.currentPage = 1;
-    this.expandedProposalId = null;
+    this.selectedProposalId = null;
   }
   setPage(page: number): void {
     if (page < 1 || page > this.totalPages) return;
     this.currentPage = page;
-    this.expandedProposalId = null;
   }
   previousPage(): void { this.setPage(this.currentPage - 1); }
   nextPage(): void { this.setPage(this.currentPage + 1); }
-  toggleProposalDetails(proposalId: string): void {
-    this.expandedProposalId = this.expandedProposalId === proposalId ? null : proposalId;
-  }
+  openProposalDetails(proposalId: string): void { this.selectedProposalId = proposalId; }
+  closeProposalDetails(): void { this.selectedProposalId = null; }
   statusLabel(status: ProposalStatus): string {
     const labels: Record<ProposalStatus, string> = {
       disponible: 'Disponible', pendiente: 'Pendiente', aceptada: 'Aceptada', rechazada: 'Rechazada',
@@ -154,7 +161,10 @@ export class CatalogPage {
   private createDemoProposal(id: string, title: string, gender: ProposalGender, age: number, tone: string, summary: string): CatalogProposal {
     return {
       id, title, gender, age, location: null, summary,
-      details: 'Registro de muestra sin información personal. Este contenido ficticio no corresponde a un menor ni a una propuesta real.',
+      details: 'Ficha de demostración creada para mostrar cómo se organizaría la información. No corresponde a un menor ni a una propuesta real.',
+      institution: `Institución de prueba ${id.split('-')[1]} · dato ficticio`,
+      interests: ['Dibujo y actividades creativas', 'Música y canciones', 'Cuentos ilustrados'],
+      characteristics: ['Contenido de ejemplo', 'Sin datos identificables', 'No representa un perfil real'],
       photoUrl: null, status: 'disponible', isDemo: true, tone,
     };
   }

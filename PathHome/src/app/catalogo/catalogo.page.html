@@ -36,6 +36,59 @@
         </aside>
       }
 
+      @if (selectedProposal; as proposal) {
+        <section class="proposal-detail-view" aria-labelledby="proposal-detail-title">
+          <button type="button" class="detail-back" (click)="closeProposalDetails()"><ion-icon name="arrow-back-outline" aria-hidden="true"></ion-icon> Volver al catálogo</button>
+          <article class="detail-card">
+            <div class="detail-overview">
+              <div class="detail-portrait" aria-hidden="true">
+                @if (proposal.photoUrl) { <img [src]="proposal.photoUrl" alt="Imagen autorizada de la propuesta" /> }
+                @else { <ion-icon name="person-outline"></ion-icon> }
+              </div>
+              <div class="detail-title-block">
+                <span class="proposal-demo-badge" [class.authorized-badge]="!proposal.isDemo">{{ proposal.isDemo ? 'FICHA FICTICIA · DEMOSTRACIÓN' : statusLabel(proposal.status) }}</span>
+                <h2 id="proposal-detail-title">{{ proposal.title }}</h2>
+                <p>{{ proposal.isDemo ? 'Información de muestra, sin datos de un menor real.' : 'Información disponible de la propuesta autorizada.' }}</p>
+              </div>
+            </div>
+
+            @if (proposal.isDemo) {
+              <div class="detail-demo-warning"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon> Todos los datos de esta ficha son ficticios; no corresponden a un niño, niña ni institución real.</div>
+            }
+
+            <div class="detail-info-grid" aria-label="Información general">
+              <div class="detail-info-item"><span>Edad</span><strong>{{ proposal.age !== null ? proposal.age + ' años' : 'No indicada' }}</strong></div>
+              <div class="detail-info-item"><span>Género</span><strong>{{ proposal.gender ? (proposal.gender === 'niña' ? 'Niña' : 'Niño') : 'No indicado' }}</strong></div>
+              <div class="detail-info-item detail-institution"><span>Institución responsable</span><strong>{{ proposal.institution || 'Información no proporcionada' }}</strong></div>
+              @if (proposal.location) { <div class="detail-info-item"><span>Ubicación</span><strong>{{ proposal.location }}</strong></div> }
+            </div>
+
+            <div class="detail-sections">
+              <section class="detail-section">
+                <h3><ion-icon name="heart-outline" aria-hidden="true"></ion-icon> Intereses y gustos</h3>
+                @if (proposal.interests.length) {
+                  <div class="detail-tags">@for (interest of proposal.interests; track interest) { <span>{{ interest }}</span> }</div>
+                } @else { <p class="detail-unavailable">La institución no ha compartido esta información.</p> }
+              </section>
+              <section class="detail-section">
+                <h3><ion-icon name="sparkles-outline" aria-hidden="true"></ion-icon> Características</h3>
+                @if (proposal.characteristics.length) {
+                  <ul>@for (characteristic of proposal.characteristics; track characteristic) { <li>{{ characteristic }}</li> }</ul>
+                } @else { <p class="detail-unavailable">La institución no ha compartido esta información.</p> }
+              </section>
+              <section class="detail-section detail-description">
+                <h3><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon> Información de la propuesta</h3>
+                <p>{{ proposal.details || proposal.summary || 'La institución no ha agregado información adicional.' }}</p>
+              </section>
+            </div>
+
+            <div class="detail-actions">
+              <button type="button" class="interest-button" disabled><ion-icon name="heart-outline" aria-hidden="true"></ion-icon> Expresar interés</button>
+              <p>Esta acción se habilitará cuando exista una propuesta autorizada y una conexión segura.</p>
+            </div>
+          </article>
+        </section>
+      } @else {
       <section class="catalog-controls" aria-label="Buscar y filtrar propuestas">
         <label class="catalog-search">
           <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
@@ -110,17 +163,9 @@
                 @if (proposal.summary) { <p class="proposal-description">{{ proposal.summary }}</p> }
               </div>
 
-              <button class="proposal-details-toggle" type="button" [attr.aria-expanded]="expandedProposalId === proposal.id" (click)="toggleProposalDetails(proposal.id)">
-                {{ expandedProposalId === proposal.id ? 'Ocultar detalles' : 'Consultar detalles' }}
-                <ion-icon [name]="expandedProposalId === proposal.id ? 'chevron-up-outline' : 'chevron-down-outline'" aria-hidden="true"></ion-icon>
+              <button class="proposal-details-toggle" type="button" (click)="openProposalDetails(proposal.id)">
+                Consultar detalles <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
               </button>
-
-              @if (expandedProposalId === proposal.id) {
-                <div class="proposal-details">
-                  <strong>Información disponible</strong>
-                  <p>{{ proposal.details || 'La institución no ha agregado más información a esta propuesta.' }}</p>
-                </div>
-              }
 
               <button type="button" class="interest-button" disabled aria-label="Expresar interés, disponible cuando exista una propuesta autorizada">
                 <ion-icon name="heart-outline" aria-hidden="true"></ion-icon> Expresar interés
@@ -153,6 +198,7 @@
           <p>Cuando la institución autorice una propuesta para tu familia, aparecerá aquí. Este catálogo solo muestra información vinculada a tu autorización.</p>
           <span class="empty-protection"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Tus propuestas son privadas</span>
         </section>
+      }
       }
 
       <footer class="catalog-footer">
