@@ -1,0 +1,21 @@
+<section class="appointment-panel" aria-label="Agendamiento de cita">
+  <div class="section-heading-row"><div><h2>{{ title }}</h2><p>{{ description }}</p></div></div>
+  <form class="appointment-form" (ngSubmit)="submit()">
+    @if (familyOptions.length) {
+      <label class="field full-field"><span>Familia</span><select name="appointmentFamily" [ngModel]="familyId" (ngModelChange)="familyIdChange.emit($event)" required><option value="">Seleccionar familia</option>@for (family of familyOptions; track family.id) { <option [value]="family.id">{{ family.label }}</option> }</select></label>
+    } @else if (familyLabel) {
+      <div class="scheduler-family full-field"><span>Familia y caso</span><strong>{{ familyLabel }}</strong></div>
+    }
+    <label class="field"><span>Fecha</span><input type="date" name="appointmentDate" [ngModel]="date" (ngModelChange)="dateChange.emit($event)" required /></label>
+    <label class="field"><span>Hora</span><input type="time" name="appointmentTime" [ngModel]="time" (ngModelChange)="timeChange.emit($event)" required /></label>
+    @if (locationReadOnly) {
+      <div class="field full-field"><span>{{ locationLabel }}</span><div class="scheduler-location-readonly">{{ location }}</div></div>
+    } @else {
+      <label class="field full-field"><span>{{ locationLabel }}</span><input type="text" name="appointmentLocation" [ngModel]="location" (ngModelChange)="locationChange.emit($event)" placeholder="Calle, número, sector, ciudad" autocomplete="street-address" required /></label>
+    }
+    <label class="field full-field"><span>Detalles para la familia (opcional)</span><textarea name="appointmentNote" rows="2" [ngModel]="note" (ngModelChange)="noteChange.emit($event)"></textarea></label>
+    @if (feedback) { <p class="scheduler-feedback full-field" role="status">{{ feedback }}</p> }
+    <p class="scheduler-required-hint full-field" [hidden]="busy || (date && time && location.trim())" aria-live="polite">Completa la fecha, la hora y la dirección para habilitar el botón.</p>
+    <button class="primary-button full-field" [class.is-busy]="busy" type="submit" [disabled]="busy || !date || !time || !location.trim() || (familyOptions.length > 0 && !familyId)" [attr.aria-busy]="busy">{{ busy ? 'Guardando cita…' : !date || !time || !location.trim() ? 'Completa los datos de la cita' : submitLabel }}</button>
+  </form>
+</section>

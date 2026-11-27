@@ -6,14 +6,15 @@ import { AlertController, IonContent, IonIcon } from '@ionic/angular';
 import { FormsModule } from '@angular/forms';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { SupabaseService } from '../core/supabase/supabase.service';
-import type { FamilyAppointment, FamilyNotification, FamilyOutcome } from '../core/supabase/supabase.service';
+import type { ChildInterestCase, FamilyAppointment, FamilyNotification, FamilyOutcome } from '../core/supabase/supabase.service';
 import { FamilyNavigationComponent } from '../shared/family-navigation/family-navigation.component';
 import type { FamilyDashboardSection } from '../shared/family-navigation/family-navigation.component';
 import { addIcons } from 'ionicons';
 import {
   calendarOutline, checkmarkCircleOutline, chatbubbleEllipsesOutline, documentTextOutline,
-  folderOpenOutline, gridOutline, helpCircleOutline, homeOutline, informationCircleOutline,
+  ellipseOutline, folderOpenOutline, gridOutline, helpCircleOutline, homeOutline, informationCircleOutline, navigateOutline,
   lockClosedOutline, logOutOutline, notificationsOutline, personOutline, settingsOutline,
+  timeOutline,
 } from 'ionicons/icons';
 
 type DashboardSection = FamilyDashboardSection;
@@ -35,6 +36,11 @@ interface DashboardNotification {
 interface AssistantMessage {
   role: 'user' | 'assistant';
   text: string;
+}
+
+interface ChildProcessStep {
+  name: string;
+  state: 'complete' | 'current' | 'upcoming';
 }
 
 @Component({
@@ -70,12 +76,18 @@ export class DashboardPage implements OnDestroy {
     { name: 'Formulario de solicitud', description: 'Documento obligatorio' },
   ];
   familyAppointments: FamilyAppointment[] = [];
+  familyChildInterestCases: ChildInterestCase[] = [];
+  childInterestCasesLoaded = false;
   documentBusy = false;
   progressNotificationsEnabled = true;
   localNotice = '';
   profileName = '';
   profileEmail = '';
   profilePhotoUrl = '';
+  homeAddress = '';
+  homeAddressDraft = '';
+  homeAddressSaving = false;
+  homeAddressFeedback = '';
   profileEditName = '';
   profileEditEmail = '';
   profileSaving = false;
@@ -102,8 +114,9 @@ export class DashboardPage implements OnDestroy {
   ) {
     addIcons({
       calendarOutline, checkmarkCircleOutline, chatbubbleEllipsesOutline, documentTextOutline,
-      folderOpenOutline, gridOutline, helpCircleOutline, homeOutline, informationCircleOutline,
+      ellipseOutline, folderOpenOutline, gridOutline, helpCircleOutline, homeOutline, informationCircleOutline, navigateOutline,
       lockClosedOutline, logOutOutline, notificationsOutline, personOutline, settingsOutline,
+      timeOutline,
     });
     this.authSubscription = this.supabase.client.auth.onAuthStateChange((_event, session) => {
       const userId = session?.user.id ?? null;
@@ -116,6 +129,8 @@ export class DashboardPage implements OnDestroy {
       this.familyApprovalStatus = null;
       this.familyOutcome = null;
       this.familyAppointments = [];
+      this.familyChildInterestCases = [];
+      this.childInterestCasesLoaded = false;
       this.familyNotifications = [];
       this.notificationsLoading = false;
       this.notificationError = '';
@@ -124,6 +139,10 @@ export class DashboardPage implements OnDestroy {
       this.profileName = '';
       this.profileEmail = '';
       this.profilePhotoUrl = '';
+      this.homeAddress = '';
+      this.homeAddressDraft = '';
+      this.homeAddressSaving = false;
+      this.homeAddressFeedback = '';
       this.profileEditName = '';
       this.profileEditEmail = '';
       this.profileRole = 'Familia solicitante';
@@ -235,11 +254,14 @@ export class DashboardPage implements OnDestroy {
 
   private async loadDashboardData(): Promise<void> {
     const generation = this.accountGeneration;
+    this.childInterestCasesLoaded = false;
     if (!this.hasLoadedInitialData) this.dashboardLoading = true;
     const pendingLoads = Promise.all([
       this.loadProfile(),
+      this.loadHomeAddress(),
       this.loadDocuments(),
       this.loadAppointments(),
+      this.loadFamilyChildInterestCases(),
       this.loadFamilyApprovalStatus(),
       this.loadFamilyOutcome(),
     ]).catch(() => undefined).finally(() => this.changeDetector.detectChanges());
@@ -309,6 +331,21 @@ export class DashboardPage implements OnDestroy {
       } else if (!error) this.profilePhotoUrl = '';
     } catch { /* La foto queda opcional si no se ha configurado su almacenamiento. */ }
     if (generation === this.accountGeneration) this.changeDetector.detectChanges();
+  }
+
+  private async loadHomeAddress(): Promise<void> {
+    const generation = this.accountGeneration;
+    try {
+      const address = await this.supabase.getMyFamilyHomeAddress();
+      if (generation === this.accountGeneration) {
+        this.homeAddress = address ?? '';
+        this.homeAddressDraft = address ?? '';
+      }
+    } catch {
+      if (generation === this.accountGeneration) this.homeAddressFeedback = 'No se pudo cargar la dirección. Verifica que el módulo de datos del hogar esté actualizado.';
+    } finally {
+      if (generation === this.accountGeneration) this.changeDetector.detectChanges();
+    }
   }
 
   get visibleNotifications(): DashboardNotification[] {
@@ -385,6 +422,11 @@ export class DashboardPage implements OnDestroy {
           void this.loadNotifications();
           void this.loadFamilyOutcome();
           void this.loadAppointments();
+          void this.loadFamilyChildInterestCases();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'child_interest_cases', filter: `family_id=eq.${familyId}` }, () => {
+          void this.loadFamilyChildInterestCases();
+          void this.loadAppointments();
         })
         .subscribe();
     } catch { /* Notifications still refresh whenever the section is opened. */ }
@@ -438,6 +480,95 @@ export class DashboardPage implements OnDestroy {
     return this.familyAppointments.filter((appointment) => !!appointment.attended_at);
   }
 
+  get selectedChildCase(): ChildInterestCase | null {
+    return this.familyChildInterestCases[0] ?? null;
+  }
+
+  get childProcessSteps(): ChildProcessStep[] {
+    const item = this.selectedChildCase;
+    if (!item) return [];
+    const steps = ['Elección del niño', 'Visita inicial', 'Informe de la institución', 'Revisión del psicólogo', 'Visita al hogar', 'Evaluación del hogar', 'Cita para recoger al niño', 'Proceso finalizado'];
+    const progress: Record<string, number> = {
+      interes_recibido: 0,
+      cita_inicial_programada: item.attended_at ? 2 : 1,
+      informe_visita_pendiente: 2,
+      informe_visita_revision: 3,
+      informe_visita_corregir: 2,
+      visita_hogar_disponible: 4,
+      cita_hogar_programada: item.attended_at ? 5 : 4,
+      evaluacion_hogar_pendiente: 5,
+      evaluacion_hogar_revision: 6,
+      evaluacion_hogar_no_favorable: 5,
+      entrega_disponible: 6,
+      cita_entrega_programada: item.attended_at ? 7 : 6,
+      entrega_confirmada: 7,
+      finalizado: 8,
+    };
+    const currentIndex = progress[item.status] ?? 0;
+    return steps.map((name, index) => ({
+      name,
+      state: index < currentIndex ? 'complete' : index === currentIndex ? 'current' : 'upcoming',
+    }));
+  }
+
+  get childProcessNextStep(): string {
+    const item = this.selectedChildCase;
+    if (!item) return '';
+    return item.status === 'finalizado' ? 'El proceso de vinculación terminó.' : this.childCaseHomeDescription(item);
+  }
+
+  childCaseHomeTitle(item: ChildInterestCase): string {
+    if (item.status === 'cita_inicial_programada') return item.appointment_date && !item.attended_at ? `Tienes una cita para conocer a ${item.child_name}` : 'Visita inicial pendiente de programación';
+    if (item.status === 'cita_hogar_programada') return item.attended_at ? 'Visita al hogar realizada' : 'Tienes una cita para la visita al hogar';
+    if (item.status === 'cita_entrega_programada') return item.attended_at ? 'Entrega confirmada' : `Tienes una cita para recoger a ${item.child_name}`;
+    if (item.status === 'informe_visita_pendiente') return 'Asistencia confirmada';
+    if (item.status === 'informe_visita_revision') return 'Informe enviado al psicólogo';
+    if (item.status === 'informe_visita_corregir') return 'El informe necesita una corrección';
+    if (item.status === 'visita_hogar_disponible') return 'El psicólogo aceptó el informe';
+    if (item.status === 'evaluacion_hogar_pendiente') return 'Visita al hogar realizada';
+    if (item.status === 'evaluacion_hogar_revision') return 'Evaluación del hogar enviada';
+    if (item.status === 'evaluacion_hogar_no_favorable') return 'La evaluación requiere seguimiento';
+    if (item.status === 'entrega_disponible') return 'Evaluación favorable';
+    if (item.status === 'cita_entrega_programada') return `Cita para recoger a ${item.child_name}`;
+    if (item.status === 'entrega_confirmada') return 'Entrega confirmada';
+    if (item.status === 'finalizado') return 'Proceso finalizado';
+    return `Ya elegiste a ${item.child_name}`;
+  }
+
+  childCaseHomeDescription(item: ChildInterestCase): string {
+    switch (item.status) {
+      case 'interes_recibido': return 'La institución recibió tu interés. Espera a que programe la visita inicial.';
+      case 'cita_inicial_programada': return item.attended_at
+        ? 'La institución confirmó tu asistencia. Espera a que envíe el informe al psicólogo.'
+        : 'Visita inicial en la institución.';
+      case 'informe_visita_pendiente': return 'La institución confirmó tu asistencia. Espera a que envíe el informe al psicólogo.';
+      case 'informe_visita_revision': return 'La institución ya envió el informe al psicólogo. Espera a que lo revise y acepte.';
+      case 'informe_visita_corregir': return item.report_reason
+        ? `El psicólogo pidió corregir el informe: ${item.report_reason}`
+        : 'El psicólogo pidió una corrección. La institución debe actualizar el informe.';
+      case 'visita_hogar_disponible': return 'El psicólogo aceptó el informe. El siguiente paso es coordinar la visita al hogar.';
+      case 'cita_hogar_programada': return item.attended_at
+        ? 'La visita al hogar se realizó. El psicólogo prepara la evaluación para la institución.'
+        : 'El psicólogo realizará la visita al hogar en la fecha y dirección indicadas.';
+      case 'evaluacion_hogar_pendiente': return 'La visita al hogar se realizó. Espera a que el psicólogo envíe la evaluación a la institución.';
+      case 'evaluacion_hogar_revision': return 'El psicólogo envió la evaluación. Espera la decisión de la institución.';
+      case 'evaluacion_hogar_no_favorable': return item.institution_observations
+        ? `La institución indicó que el caso requiere seguimiento: ${item.institution_observations}`
+        : 'La institución indicó que el caso requiere seguimiento. El proceso continúa abierto.';
+      case 'entrega_disponible': return 'La evaluación fue favorable. Espera a que la institución programe la cita de entrega.';
+      case 'cita_entrega_programada': return item.attended_at
+        ? 'La asistencia está confirmada. El psicólogo actualizará el estado de la entrega.'
+        : 'La institución programó la cita de entrega. Revisa la dirección y abre Google Maps para llegar.';
+      case 'entrega_confirmada': return 'La entrega fue confirmada. El psicólogo completará el cierre del caso.';
+      case 'finalizado': return 'La entrega se confirmó y el proceso está finalizado.';
+      default: return 'Espera las próximas indicaciones de la institución.';
+    }
+  }
+
+  childCaseHasUpcomingAppointment(item: ChildInterestCase): boolean {
+    return Boolean(item.appointment_date && !item.attended_at && ['visita_inicial', 'visita_hogar', 'entrega'].includes(item.appointment_type ?? ''));
+  }
+
   get processStatus(): string {
     if (this.familyOutcome?.status === 'aceptada') return 'Apta para acceder al catálogo';
     if (this.familyOutcome?.status === 'rechazada') return 'La institución solicita una nueva evaluación';
@@ -456,7 +587,7 @@ export class DashboardPage implements OnDestroy {
     const administratorRejected = this.familyApprovalStatus === 'rechazada';
     const appointment = this.upcomingFamilyAppointments[0];
     const appointmentStatus = appointment
-      ? `Cita agendada: ${this.appointmentDate(appointment.appointment_date)} · ${appointment.appointment_time}`
+      ? `Cita agendada: ${this.appointmentDate(appointment.appointment_date)} · ${this.appointmentTime(appointment.appointment_time)}`
       : this.completedFamilyAppointments.length
         ? 'Cita realizada · informe enviado o en preparación'
       : administratorApproved
@@ -505,25 +636,11 @@ export class DashboardPage implements OnDestroy {
       },
       {
         name: 'Catálogo de niños',
-        status: this.familyOutcome?.status === 'aceptada' ? 'Acceso habilitado' : this.familyOutcome?.status === 'rechazada' ? 'Aún no habilitado · se puede realizar otra evaluación' : 'Se habilita si la institución acepta el informe',
-        icon: this.familyOutcome?.status === 'aceptada' ? 'checkmark-circle-outline' : this.familyOutcome?.status === 'rechazada' ? 'close-circle-outline' : 'home-outline',
+        status: this.selectedChildCase ? `Elegiste a ${this.selectedChildCase.child_name} · espera la cita de la institución` : this.familyOutcome?.status === 'aceptada' ? 'Acceso habilitado' : this.familyOutcome?.status === 'rechazada' ? 'Aún no habilitado · se puede realizar otra evaluación' : 'Se habilita si la institución acepta el informe',
+        icon: this.selectedChildCase || this.familyOutcome?.status === 'aceptada' ? 'checkmark-circle-outline' : this.familyOutcome?.status === 'rechazada' ? 'close-circle-outline' : 'home-outline',
         current: false,
-        complete: this.familyOutcome?.status === 'aceptada',
+        complete: Boolean(this.selectedChildCase) || this.familyOutcome?.status === 'aceptada',
         rejected: this.familyOutcome?.status === 'rechazada',
-      },
-      {
-        name: 'Entrevista inicial',
-        status: administratorApproved ? 'Pendiente de registro' : administratorRejected ? 'No disponible mientras la revisión esté rechazada' : 'Disponible después de la aprobación',
-        icon: 'chatbubble-ellipses-outline',
-        current: false,
-        complete: false,
-      },
-      {
-        name: 'Decisión final',
-        status: 'Pendiente de la etapa correspondiente',
-        icon: 'checkmark-circle-outline',
-        current: false,
-        complete: false,
       },
     ];
   }
@@ -535,7 +652,10 @@ export class DashboardPage implements OnDestroy {
     return this.activeSection === 'proceso' ? 'proceso' : this.activeSection === 'perfil' ? 'perfil' : 'inicio';
   }
 
-  openCatalog(): void { void this.router.navigateByUrl('/catalogo'); }
+  openCatalog(): void {
+    if (this.selectedChildCase) return;
+    void this.router.navigateByUrl('/catalogo');
+  }
 
   showSection(section: DashboardSection): void {
     this.activeSection = section;
@@ -544,6 +664,11 @@ export class DashboardPage implements OnDestroy {
       this.profileEditName = this.profileName;
       this.profileEditEmail = this.profileEmail;
       this.profileFeedback = '';
+    }
+    if (section === 'hogar') {
+      this.homeAddressDraft = this.homeAddress;
+      this.homeAddressFeedback = '';
+      void this.loadHomeAddress();
     }
     if (section === 'notificaciones') void this.loadNotifications();
   }
@@ -604,6 +729,20 @@ export class DashboardPage implements OnDestroy {
     finally { if (generation === this.accountGeneration) this.changeDetector.detectChanges(); }
   }
 
+  private async loadFamilyChildInterestCases(): Promise<void> {
+    const generation = this.accountGeneration;
+    try {
+      const cases = await this.supabase.listChildInterestCases();
+      if (generation === this.accountGeneration) this.familyChildInterestCases = cases;
+    } catch { /* El flujo del catálogo puede no estar instalado todavía. */ }
+    finally {
+      if (generation === this.accountGeneration) {
+        this.childInterestCasesLoaded = true;
+        this.changeDetector.detectChanges();
+      }
+    }
+  }
+
   private async loadFamilyApprovalStatus(): Promise<void> {
     const generation = this.accountGeneration;
     try { const status = await this.supabase.getMyFamilyApprovalStatus(); if (generation === this.accountGeneration) this.familyApprovalStatus = status; }
@@ -622,6 +761,14 @@ export class DashboardPage implements OnDestroy {
     return new Date(`${value}T12:00:00`).toLocaleDateString('es-DO', { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
+  appointmentTime(value: string): string {
+    return value.slice(0, 5);
+  }
+
+  googleMapsDirections(location: string | null | undefined): string {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location?.trim() ?? '')}`;
+  }
+
   formatDocumentDate(value: string): string {
     return new Date(value).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' });
   }
@@ -633,6 +780,31 @@ export class DashboardPage implements OnDestroy {
       ayuda: 'La ayuda y el soporte estarán disponibles cuando se conecte el servicio.',
     };
     this.localNotice = messages[action];
+  }
+
+  async saveHomeAddress(): Promise<void> {
+    const address = this.homeAddressDraft.trim();
+    if (!address) {
+      this.homeAddressFeedback = 'Escribe la dirección donde vive la familia.';
+      return;
+    }
+    if (address.length > 500) {
+      this.homeAddressFeedback = 'La dirección no puede superar los 500 caracteres.';
+      return;
+    }
+    this.homeAddressSaving = true;
+    this.homeAddressFeedback = '';
+    try {
+      await this.supabase.updateMyFamilyHomeAddress(address);
+      this.homeAddress = address;
+      this.homeAddressDraft = address;
+      this.homeAddressFeedback = 'Dirección guardada. El psicólogo asignado podrá usarla para coordinar la visita al hogar.';
+    } catch (error) {
+      this.homeAddressFeedback = error instanceof Error ? error.message : 'No se pudo guardar la dirección del hogar.';
+    } finally {
+      this.homeAddressSaving = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async saveProfileChanges(): Promise<void> {

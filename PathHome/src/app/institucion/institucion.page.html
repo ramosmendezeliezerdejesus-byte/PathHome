@@ -90,52 +90,35 @@
           <div class="institution-subnav" aria-label="Navegación de perfiles"><button type="button" (click)="showSection('expedientes')">Expedientes</button><button class="active" type="button" (click)="showSection('ninos')">Niños a cargo</button><button type="button" (click)="showSection('catalogo')">Catálogo</button></div>
           <div class="child-registration-grid">
             <section class="institution-panel registration-panel" aria-label="Formulario de registro">
-              <div class="registration-heading"><span><ion-icon name="add-outline" aria-hidden="true"></ion-icon></span><div><h2>Nuevo perfil</h2><p>Los campos con * son obligatorios</p></div></div>
-              <form id="child-registration-form" class="child-form-layout" novalidate (submit)="validateDemoForm($event, 'el perfil de ejemplo')">
+              <div class="registration-heading"><span><ion-icon [name]="editingChildId ? 'create-outline' : 'add-outline'" aria-hidden="true"></ion-icon></span><div><h2>{{ editingChildId ? 'Editar perfil' : 'Nuevo perfil' }}</h2><p>Los campos con * son obligatorios</p></div></div>
+              <form id="child-registration-form" class="child-form-layout" (submit)="registerChild($event)">
                 <label class="photo-upload" for="child-photo">
                   <input id="child-photo" type="file" accept="image/jpeg,image/png" (change)="selectDemoFile($event, 'child')" />
-                  <ion-icon name="camera-outline" aria-hidden="true"></ion-icon><strong>Subir foto</strong><span>{{ childPhotoNotice }}</span>
+                  @if (editingChildPhotoUrl) { <img class="child-photo-preview" [src]="editingChildPhotoUrl" alt="Foto actual del perfil" /> } @else { <ion-icon name="camera-outline" aria-hidden="true"></ion-icon> }<strong>{{ selectedChildPhoto ? 'Foto seleccionada' : editingChildPhotoUrl ? 'Cambiar foto' : 'Subir foto' }}</strong><span>{{ selectedChildPhoto?.name || childPhotoNotice }}</span>
                 </label>
                 <div class="child-form-fields">
-                  <label><span>Nombre(s) <b>*</b></span><input name="name" type="text" placeholder="Ej: María José" required minlength="2" autocomplete="off" /></label>
-                  <label><span>Edad <b>*</b></span><select name="age" aria-label="Edad" required><option value="">Ej: 8 años</option><option>6 años</option><option>7 años</option><option>8 años</option><option>9 años</option><option>10 años</option></select></label>
-                  <label><span>Género <b>*</b></span><select name="gender" aria-label="Género" required><option value="">Seleccionar...</option><option>Niña</option><option>Niño</option></select></label>
-                  <label><span>Institución responsable <b>*</b></span><select name="institution" aria-label="Institución responsable" required><option value="">Seleccionar institución</option><option [value]="institutionName">{{ institutionName }}</option></select></label>
-                  <label class="full-field"><span>Descripción breve</span><textarea rows="2" placeholder="Describe sus características (opcional)..."></textarea></label>
+                  <label><span>Nombre(s) <b>*</b></span><input name="name" [(ngModel)]="childDraft.name" type="text" placeholder="Ej: María José" required minlength="2" autocomplete="off" /></label>
+                  <label><span>Edad <b>*</b></span><input name="age" [(ngModel)]="childDraft.age" type="number" min="0" max="17" placeholder="Ej: 8" required /></label>
+                  <label><span>Género <b>*</b></span><select name="gender" [(ngModel)]="childDraft.gender" aria-label="Género" required><option value="">Seleccionar...</option><option>Niña</option><option>Niño</option></select></label>
+                  <label><span>Institución responsable</span><input name="institution" type="text" [value]="institutionName" readonly aria-readonly="true" /></label>
+                  <label class="full-field"><span>Descripción breve</span><textarea name="summary" [(ngModel)]="childDraft.summary" rows="2" placeholder="Descripción breve (opcional)..."></textarea></label>
+                  <label class="full-field"><span>Características</span><textarea name="characteristics" [(ngModel)]="childDraft.characteristics" rows="2" placeholder="Una por línea o separadas por coma"></textarea></label>
+                  <label class="full-field"><span>Intereses y gustos</span><textarea name="interests" [(ngModel)]="childDraft.interests" rows="2" placeholder="Una por línea o separadas por coma"></textarea></label>
                 </div>
               </form>
-              <div class="registration-actions"><span class="demo-save-notice" role="status">{{ demoNotice || 'Demostración: los datos no se guardan ni se envían.' }}</span><button class="secondary-button" type="button" (click)="showSection('inicio')">Cancelar</button><button class="primary-button" type="submit" form="child-registration-form">Validar datos</button></div>
+              @if (childError) { <p class="family-error" role="alert">{{ childError }}</p> }
+              <div class="registration-actions"><span class="demo-save-notice" role="status">{{ demoNotice || 'El perfil se guardará de forma segura para tu institución.' }}</span>@if (editingChildId) { <button class="secondary-button" type="button" (click)="cancelChildEdit()">Cancelar edición</button> }<button class="primary-button" type="submit" form="child-registration-form" [disabled]="childSaving">{{ childSaving ? 'Guardando…' : editingChildId ? 'Guardar cambios' : 'Registrar perfil' }}</button></div>
             </section>
 
             <aside class="institution-panel registered-panel" aria-labelledby="registered-title">
-              <div class="section-title"><h2 id="registered-title">Perfiles de ejemplo</h2><span class="demo-action-label">{{ demoChildren.length }} ficticios</span></div>
-              <div class="registered-list">
-                @for (child of demoChildren; track child.profile) {
-                  <button class="registered-child" type="button" (click)="openChildProfile(child)" [attr.aria-label]="'Abrir perfil de demostración ' + child.profile"><span [class]="'registered-avatar ' + child.tone">@if (child.photo) { <img [src]="child.photo" alt="" /> } @else { <ion-icon name="person-outline" aria-hidden="true"></ion-icon> }</span><span class="registered-child-copy"><strong>{{ child.type }} · {{ child.age }}</strong><small>Perfil: {{ child.profile }}</small></span><i aria-hidden="true"></i></button>
-                }
-              </div>
+              <div class="section-title"><h2 id="registered-title">Perfiles registrados</h2><span class="demo-action-label">{{ institutionChildren.length }}</span></div>
+              @for (child of institutionChildren; track child.id) {
+                <article class="registered-child-row"><span class="registered-avatar mint">@if (child.photo_url) { <img [src]="child.photo_url" [alt]="'Foto de ' + child.name" /> } @else { <ion-icon name="person-outline" aria-hidden="true"></ion-icon> }</span><span class="registered-child-copy"><strong>{{ child.name }} · {{ child.age }} años</strong><small>{{ child.gender }} · {{ child.institution_name }}</small></span><span class="child-record-actions"><button type="button" (click)="editInstitutionChild(child)" [disabled]="childSaving">Editar</button><button type="button" (click)="deleteInstitutionChild(child)" [disabled]="childSaving">Eliminar</button></span></article>
+              }
+              @if (!institutionChildren.length) { <p class="empty-demo-state">Aún no hay niños registrados.</p> }
               <div class="privacy-card"><span><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon></span><div><strong>Información protegida</strong><p>Solo personal autorizado puede acceder.</p></div></div>
             </aside>
           </div>
-        </section>
-      }
-
-      @if (activeSection === 'catalogo') {
-        <section class="page-content catalog-page">
-          <header class="section-heading section-heading-action"><div><h1>Catálogo de perfiles autorizados</h1><p>Perfiles de demostración · sin conexión a registros reales.</p></div><span class="privacy-label"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Información protegida</span></header>
-          <section class="institution-panel catalog-panel" aria-label="Perfiles ficticios disponibles para consulta">
-            <div class="section-title"><h2>Perfiles de ejemplo</h2><span class="demo-action-label">{{ demoChildren.length }} perfiles ficticios</span></div>
-            <p class="catalog-notice">Este catálogo utiliza únicamente datos ficticios. No muestra registros reales ni administra autorizaciones.</p>
-            <div class="catalog-card-grid">
-              @for (child of demoChildren; track child.profile) {
-                <article class="catalog-child-card">
-                  <span [class]="'catalog-child-avatar ' + child.tone">@if (child.photo) { <img [src]="child.photo" alt="" /> } @else { <ion-icon name="person-outline" aria-hidden="true"></ion-icon> }</span>
-                  <div class="catalog-child-copy"><strong>{{ child.type }} · {{ child.age }}</strong><span>Perfil {{ child.profile }}</span><small>{{ child.status }} · demostración</small></div>
-                  <button type="button" (click)="openChildProfile(child, 'catalogo')">Ver perfil protegido <span aria-hidden="true">›</span></button>
-                </article>
-              }
-            </div>
-          </section>
         </section>
       }
 
@@ -182,6 +165,39 @@
         </section>
       }
 
+      @if (activeSection === 'casos') {
+        <section class="page-content institution-reports-page">
+          <header class="section-heading section-heading-action"><div><h1>Intereses y procesos</h1><p>Casos privados de los niños bajo responsabilidad de {{ institutionName }}.</p></div><button type="button" (click)="loadChildInterestCases()">Actualizar</button></header>
+          @if (caseWorkflowNotice) { <p class="family-notice" role="status">{{ caseWorkflowNotice }}</p> }
+          @if (caseWorkflowError) { <p class="family-error" role="alert">{{ caseWorkflowError }}</p> }
+          @for (item of childInterestCases; track item.id) {
+            <article class="family-detail-panel" style="margin-block: 1rem">
+              <div class="family-detail-heading"><div><span class="family-card-label">PROCESO DE VINCULACIÓN</span><h2>{{ item.child_name }} · {{ item.child_age }} años</h2><p>Familia: {{ item.family_name }} · Iniciado {{ formatReportDate(item.created_at.slice(0,10)) }}</p></div><span class="family-status" [class.aprobada]="item.status === 'finalizado'">{{ item.status.replaceAll('_', ' ') }}</span></div>
+              @if (item.status === 'interes_recibido') {
+                <app-appointment-scheduler title="Agendar primera visita en la institución" description="Selecciona la fecha, hora y dirección para que la familia visite la institución." [familyLabel]="item.family_name + ' · ' + item.child_name" [(date)]="workflowDraft.date" [(time)]="workflowDraft.time" [(location)]="workflowDraft.location" [(note)]="workflowDraft.note" [busy]="caseWorkflowBusy" [feedback]="caseWorkflowError" submitLabel="Agendar y avisar a la familia" (scheduleRequested)="scheduleInterestAppointment(item, 'visita_inicial', $event)"></app-appointment-scheduler>
+              }
+              @if (item.status === 'cita_inicial_programada') {
+                <div class="initial-visit-summary"><span class="initial-visit-summary-icon"><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon></span><div><span class="initial-visit-eyebrow">VISITA INICIAL</span><p>{{ formatReportDate(item.appointment_date || '') }} · {{ item.appointment_time?.slice(0,5) }}</p>@if (item.appointment_note) { <small>{{ item.appointment_note }}</small> }</div></div>
+                @if (editingInitialVisitCaseId === item.id) {
+                  <app-appointment-scheduler title="Editar visita inicial" description="Actualiza la fecha, hora, dirección o los detalles. Avisaremos a la familia." [familyLabel]="item.family_name + ' · ' + item.child_name" [(date)]="workflowDraft.date" [(time)]="workflowDraft.time" [(location)]="workflowDraft.location" [(note)]="workflowDraft.note" [busy]="caseWorkflowBusy" [feedback]="caseWorkflowError" submitLabel="Guardar cambios" (scheduleRequested)="saveInitialVisit(item, $event)"></app-appointment-scheduler>
+                  <button class="appointment-action appointment-action-cancel" type="button" [disabled]="caseWorkflowBusy" (click)="cancelInitialVisitEdit()">Cancelar edición</button>
+                } @else if (!item.attended_at) {
+                  <div class="initial-visit-actions"><button class="appointment-action appointment-action-confirm" type="button" [disabled]="caseWorkflowBusy || !item.appointment_date || item.appointment_date > todayDate" (click)="confirmInitialVisit(item)"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon>{{ caseWorkflowBusy ? 'Guardando…' : 'Confirmar asistencia' }}</button><button class="appointment-action appointment-action-edit" type="button" [disabled]="caseWorkflowBusy" (click)="editInitialVisit(item)"><ion-icon name="create-outline" aria-hidden="true"></ion-icon>Editar cita</button><button class="appointment-action appointment-action-delete" type="button" [disabled]="caseWorkflowBusy" (click)="deleteInitialVisit(item)"><ion-icon name="trash-outline" aria-hidden="true"></ion-icon>Eliminar cita</button></div>
+                } @else { <p class="appointment-attended-note"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon> Asistencia confirmada</p> }
+              }
+              @if (item.status === 'informe_visita_pendiente' || item.status === 'informe_visita_corregir') {
+                <h3>Informe de la visita</h3><div class="form-grid"><label class="field full-field"><span>Observaciones *</span><textarea rows="3" [(ngModel)]="workflowDraft.observations"></textarea></label><label class="field"><span>Fortalezas observadas</span><textarea rows="2" [(ngModel)]="workflowDraft.strengths"></textarea></label><label class="field"><span>Aspectos por atender</span><textarea rows="2" [(ngModel)]="workflowDraft.concerns"></textarea></label><label class="field full-field"><span>Recomendación *</span><textarea rows="2" [(ngModel)]="workflowDraft.recommendation"></textarea></label></div><div class="institution-report-submit-actions"><button class="institution-report-submit-button" type="button" [disabled]="caseWorkflowBusy" (click)="submitInitialVisitReport(item)"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon>{{ caseWorkflowBusy ? 'Enviando informe…' : 'Enviar informe al psicólogo responsable' }}</button><span>El psicólogo asignado recibirá una notificación para revisarlo.</span></div>
+              }
+              @if (item.status === 'evaluacion_hogar_revision' || item.status === 'evaluacion_hogar_no_favorable') { <div class="institution-report-copy"><h3>Evaluación del hogar</h3><p>{{ item.report_observations }}</p><h3>Fortalezas</h3><p>{{ item.report_strengths }}</p><h3>Aspectos por atender</h3><p>{{ item.report_concerns }}</p><h3>Recomendación</h3><p>{{ item.report_recommendation }}</p></div>@if (item.status === 'evaluacion_hogar_no_favorable') { <p>La evaluación se registró como no favorable. El caso permanece abierto; puedes actualizar la decisión cuando corresponda.</p> }<label class="institution-report-reason"><span>Observaciones de la institución</span><textarea rows="3" [(ngModel)]="caseDecisionReason"></textarea></label><div class="family-review-actions"><button class="family-approve-button" type="button" [disabled]="caseWorkflowBusy" (click)="decideHomeVisit(item, true)">Evaluación favorable</button><button class="family-reject-button" type="button" [disabled]="caseWorkflowBusy" (click)="decideHomeVisit(item, false)">Registrar no favorable</button></div> }
+              @if (item.status === 'entrega_disponible') { <app-appointment-scheduler title="Coordinar la entrega" description="Selecciona cuándo y dónde la familia acudirá a coordinar la entrega." [familyLabel]="item.family_name + ' · ' + item.child_name" [(date)]="workflowDraft.date" [(time)]="workflowDraft.time" [(location)]="workflowDraft.location" [(note)]="workflowDraft.note" [busy]="caseWorkflowBusy" [feedback]="caseWorkflowError" submitLabel="Agendar cita de entrega" (scheduleRequested)="scheduleInterestAppointment(item, 'entrega', $event)"></app-appointment-scheduler> }
+              @if (item.status === 'cita_entrega_programada') { <p>Cita de entrega: {{ formatReportDate(item.appointment_date || '') }} · {{ item.appointment_time?.slice(0,5) }}. La cita no finaliza el caso; el psicólogo confirma la entrega.</p> }
+              @if (item.status === 'evaluacion_hogar_no_favorable') { <p>La evaluación quedó registrada como no favorable. El caso continúa abierto.</p> }
+              @if (item.status === 'finalizado') { <p>La entrega fue confirmada y el caso está finalizado.</p> }
+            </article>
+          } @empty { @if (!caseWorkflowError) { <div class="family-empty"><strong>No hay intereses recibidos</strong><p>Cuando una familia exprese interés en un perfil de tu institución, el caso aparecerá aquí.</p></div> } }
+        </section>
+      }
+
       @if (activeSection === 'evaluaciones') {
         <section class="page-content">
           <header class="section-heading"><h1>Evaluaciones</h1><p>Estado de evaluaciones · datos de demostración.</p></header>
@@ -200,27 +216,27 @@
       }
 
       @if (activeSection === 'citas') {
-        <section class="page-content"><header class="section-heading"><h1>Citas</h1><p>Agenda institucional · fechas y datos ficticios.</p></header>
-          <section class="institution-panel appointment-scheduler" aria-labelledby="schedule-title">
-            <div class="section-title"><h2 id="schedule-title">Programar cita</h2><span class="demo-action-label">Vista demostrativa · no se envían avisos</span></div>
-            <form class="institution-form" novalidate (submit)="validateDemoForm($event, 'la programación de la cita')">
-              <label><span>Expediente *</span><select name="appointmentCase" required><option value="">Seleccionar expediente</option>@for (record of demoCases; track record.id) { <option [value]="record.id">{{ record.id }} · {{ record.family }}</option> }</select></label>
-              <label><span>Tipo de cita *</span><select name="appointmentType" required><option value="">Seleccionar tipo</option><option>Entrevista inicial</option><option>Seguimiento</option><option>Evaluación</option></select></label>
-              <label><span>Fecha *</span><input name="appointmentDate" type="date" required /></label>
-              <label><span>Hora *</span><input name="appointmentTime" type="time" required /></label>
-              <label class="full-field"><span>Nota (opcional)</span><textarea name="appointmentNote" rows="2" placeholder="Nota para la cita demostrativa"></textarea></label>
-              <div class="form-actions"><span class="demo-save-notice" role="status">{{ demoNotice || 'Los datos son de ejemplo; no se guarda ni notifica a familias.' }}</span><button type="submit">Programar y notificar</button></div>
-            </form>
+        <section class="page-content institution-appointments-page"><header class="section-heading"><h1>Citas</h1><p>Calendario de visitas y entregas programadas para los niños bajo responsabilidad de {{ institutionName }}.</p></header>
+          <div class="appointment-legend" aria-label="Tipos de cita"><span><i class="legend-dot initial-visit"></i> Visita inicial en la institución</span><span><i class="legend-dot child-pickup"></i> Cita para recoger al niño</span><span><i class="legend-dot home-visit"></i> Visita al hogar</span></div>
+          <section class="institution-calendar-panel" aria-label="Calendario de citas institucionales">
+            <div class="institution-calendar-main">
+              <div class="institution-calendar-toolbar"><div><p>AGENDA</p><h2>{{ calendarMonthLabel }}</h2></div><div class="institution-calendar-controls"><button type="button" aria-label="Mes anterior" (click)="moveCalendarMonth(-1)">‹</button><button type="button" class="today-button" (click)="goToToday()">Hoy</button><button type="button" aria-label="Mes siguiente" (click)="moveCalendarMonth(1)">›</button></div></div>
+              <div class="institution-calendar-grid"><div class="institution-calendar-weekday">Lun</div><div class="institution-calendar-weekday">Mar</div><div class="institution-calendar-weekday">Mié</div><div class="institution-calendar-weekday">Jue</div><div class="institution-calendar-weekday">Vie</div><div class="institution-calendar-weekday">Sáb</div><div class="institution-calendar-weekday">Dom</div>
+                @for (week of calendarWeeks; track $index) { @for (day of week; track day.key) {
+                  <button type="button" class="institution-calendar-day" [class.outside-month]="!day.inMonth" [class.selected-day]="selectedCalendarDate === day.key" (click)="selectCalendarDay(day.key)" [attr.aria-label]="day.key + (hasAppointment(day.key) ? ', tiene citas' : '')"><span>{{ day.day }}</span>
+                    @for (appointment of institutionAppointments; track appointment.id) { @if (appointment.appointment_date === day.key) { <i class="appointment-marker" [class.initial-visit]="appointmentTone(appointment) === 'initial-visit'" [class.child-pickup]="appointmentTone(appointment) === 'child-pickup'" [class.home-visit]="appointmentTone(appointment) === 'home-visit'" aria-hidden="true"></i> } }
+                  </button>
+                } }
+              </div>
+            </div>
+            <aside class="institution-calendar-side"><div><h3>Citas del día</h3><p>{{ selectedCalendarLabel }}</p></div>
+              @for (appointment of selectedDayAppointments; track appointment.id) {
+                <article class="institution-calendar-appointment" [class.initial-visit]="appointmentTone(appointment) === 'initial-visit'" [class.child-pickup]="appointmentTone(appointment) === 'child-pickup'" [class.home-visit]="appointmentTone(appointment) === 'home-visit'"><span class="appointment-time">{{ appointment.appointment_time?.slice(0, 5) }}</span><div><strong>{{ appointmentTitle(appointment) }}</strong><p>{{ appointment.child_name }} · {{ appointment.family_name }}</p>@if (appointment.appointment_note) { <small>{{ appointment.appointment_note }}</small> }</div></article>
+              } @empty { <div class="institution-calendar-empty"><ion-icon name="calendar-outline"></ion-icon><p>No hay citas programadas para este día.</p></div> }
+            </aside>
           </section>
-          <h2 class="institution-subheading">Agenda</h2>
-          <div class="table-card"><div class="table-heading"><strong>Citas de ejemplo</strong><span>Sin reservas reales</span></div>
-            @for (appointment of demoAppointments; track appointment.id) {
-              <article class="case-row"><span class="case-icon yellow"><ion-icon name="calendar-outline"></ion-icon></span><div><strong>{{ appointment.title }}</strong><p>{{ appointment.date }} · {{ appointment.time }} · {{ appointment.family }}</p></div><span class="status pending">Ficticia</span><button class="arrow" type="button" [attr.aria-label]="'Ver cita ' + appointment.id" (click)="openAppointmentDetails(appointment)">›</button></article>
-            }
-          </div>
-          @if (selectedAppointment) {
-            <article class="case-detail-card appointment-detail"><span class="case-icon blue"><ion-icon name="calendar-outline"></ion-icon></span><div><strong>{{ selectedAppointment.title }} · {{ selectedAppointment.id }}</strong><p>{{ selectedAppointment.date }} · {{ selectedAppointment.time }} · {{ selectedAppointment.location }}</p><small>{{ selectedAppointment.family }} · Expediente {{ selectedAppointment.caseId }} · fecha ficticia</small></div><button class="section-back" type="button" aria-label="Cerrar detalle de cita" (click)="selectedAppointment = null">×</button></article>
-          }
+          @if (caseWorkflowError) { <p class="family-error" role="alert">{{ caseWorkflowError }}</p> }
+          @if (institutionAppointments.length === 0) { <div class="family-empty institution-calendar-empty-state"><strong>Aún no hay citas programadas</strong><p>Las visitas iniciales y citas de entrega que agende la institución aparecerán aquí.</p><button type="button" (click)="showSection('casos')">Ver intereses y procesos</button></div> }
         </section>
       }
 

@@ -1,0 +1,7 @@
+:host .photo-upload .child-photo-preview{width:76px;height:76px;border:2px solid #e5e9ff;border-radius:50%;object-fit:cover}
+:host .registered-child-row{display:flex;min-width:0;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid #eef0f8}
+:host .registered-child-row .registered-child-copy{flex:1;min-width:0}
+:host .child-record-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+:host .child-record-actions button{min-height:30px;padding:0 10px;border:1px solid #dfe3f5;border-radius:8px;background:#fff;color:#575f8d;font:inherit;font-size:10px;font-weight:750;cursor:pointer}
+:host .child-record-actions button:last-child{border-color:#f1d9dc;color:#b44f5b}
+:host .child-record-actions button:disabled{opacity:.55;cursor:wait}

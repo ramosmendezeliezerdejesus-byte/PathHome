@@ -1,16 +1,17 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonContent, IonIcon } from '@ionic/angular';
+import { AlertController, IonContent, IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
   alertCircleOutline, arrowBackOutline, arrowForwardOutline, bookOutline, calendarOutline,
   chevronBackOutline, chevronDownOutline, chevronForwardOutline, closeOutline, documentTextOutline,
-  heartOutline, informationCircleOutline,
+  heartOutline,
   locationOutline, lockClosedOutline, peopleOutline, personOutline, searchOutline,
   shieldCheckmarkOutline, sparklesOutline,
 } from 'ionicons/icons';
 import { FamilyNavigationComponent } from '../shared/family-navigation/family-navigation.component';
 import type { FamilyDashboardSection } from '../shared/family-navigation/family-navigation.component';
+import { FamilyCatalogChild, InstitutionChildProfile, SupabaseService } from '../core/supabase/supabase.service';
 
 type ProposalStatus = 'disponible' | 'pendiente' | 'aceptada' | 'rechazada';
 type ProposalGender = 'niño' | 'niña';
@@ -30,7 +31,6 @@ interface CatalogProposal {
   characteristics: string[];
   photoUrl: string | null;
   status: ProposalStatus;
-  isDemo: boolean;
   tone: string;
 }
 
@@ -41,20 +41,14 @@ interface CatalogProposal {
   templateUrl: './catalogo.page.html',
   styleUrl: './catalogo.page.scss',
 })
-export class CatalogPage {
-  /** Solo contendrá propuestas recibidas con autorización familiar válida. */
+export class CatalogPage implements OnDestroy {
   proposals: CatalogProposal[] = [];
-  readonly demoProposals: CatalogProposal[] = [
-    this.createDemoProposal('demo-01', 'Ejemplo visual 01', 'niño', 4, 'Azul', 'Muestra ficticia para revisar la presentación del catálogo.'),
-    this.createDemoProposal('demo-02', 'Ejemplo visual 02', 'niña', 6, 'Rosa', 'Contenido de prueba sin nombres, fotografías ni datos reales.'),
-    this.createDemoProposal('demo-03', 'Ejemplo visual 03', 'niño', 8, 'Verde', 'Tarjeta demostrativa; no representa una propuesta autorizada.'),
-    this.createDemoProposal('demo-04', 'Ejemplo visual 04', 'niña', 10, 'Lila', 'Datos ficticios destinados únicamente a comprobar filtros.'),
-    this.createDemoProposal('demo-05', 'Ejemplo visual 05', 'niño', 12, 'Azul', 'Información de ejemplo sin perfil de un menor.'),
-    this.createDemoProposal('demo-06', 'Ejemplo visual 06', 'niña', 15, 'Rosa', 'Contenido demostrativo. No se envía ni se guarda información.'),
-  ];
 
   mobileMenuOpen = false;
-  showDemoProposals = true;
+  isInstitutionView = false;
+  interestBusyId: string | null = null;
+  interestNotice = '';
+  private interestedChildIds = new Set<string>();
   isLoading = false;
   loadError = '';
   searchText = '';
@@ -68,23 +62,25 @@ export class CatalogPage {
     { value: 'niño', label: 'Niño' },
     { value: 'niña', label: 'Niña' },
   ];
+  private institutionChildrenChannel: { unsubscribe: () => Promise<unknown> } | null = null;
+  private familyCatalogRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private readonly router: Router) {
+  constructor(private readonly router: Router, private readonly supabase: SupabaseService, private readonly changeDetector: ChangeDetectorRef, private readonly alertController: AlertController) {
     addIcons({
       alertCircleOutline, arrowBackOutline, arrowForwardOutline, bookOutline, calendarOutline,
       chevronBackOutline, chevronDownOutline, chevronForwardOutline, closeOutline, documentTextOutline,
-      heartOutline, informationCircleOutline,
+      heartOutline,
       locationOutline, lockClosedOutline, peopleOutline, personOutline, searchOutline,
       shieldCheckmarkOutline, sparklesOutline,
     });
+    void this.loadCatalog();
   }
 
   get filteredProposals(): CatalogProposal[] {
-    const source = this.demoModeActive ? this.demoProposals : this.proposals;
     const query = this.searchText.trim().toLocaleLowerCase('es');
-    return source.filter((proposal) => {
+    return this.proposals.filter((proposal) => {
       const matchesGender = this.genderFilter === 'todas' || proposal.gender === this.genderFilter;
-      const matchesQuery = !query || [proposal.title, proposal.gender, proposal.age?.toString(), proposal.age === null ? null : `${proposal.age} años`, proposal.location, proposal.summary, proposal.details]
+      const matchesQuery = !query || [proposal.title, proposal.gender, proposal.age?.toString(), proposal.age === null ? null : `${proposal.age} años`, proposal.location, proposal.summary, proposal.details, proposal.institution, ...proposal.characteristics, ...proposal.interests]
         .some((value) => value?.toLocaleLowerCase('es').includes(query));
       return matchesGender && matchesQuery && this.matchesAge(proposal.age);
     });
@@ -93,10 +89,8 @@ export class CatalogPage {
   get visibleProposals(): CatalogProposal[] { return this.filteredProposals; }
   get selectedProposal(): CatalogProposal | null {
     if (!this.selectedProposalId) return null;
-    const source = this.demoModeActive ? this.demoProposals : this.proposals;
-    return source.find((proposal) => proposal.id === this.selectedProposalId) ?? null;
+    return this.proposals.find((proposal) => proposal.id === this.selectedProposalId) ?? null;
   }
-  get demoModeActive(): boolean { return this.showDemoProposals && this.proposals.length === 0; }
   get paginatedProposals(): CatalogProposal[] {
     const start = (this.currentPage - 1) * this.pageSize;
     return this.filteredProposals.slice(start, start + this.pageSize);
@@ -108,14 +102,14 @@ export class CatalogPage {
     void this.router.navigateByUrl('/dashboard', { state: { familyDashboardSection: section } });
   }
 
+  ngOnDestroy(): void {
+    if (this.institutionChildrenChannel) void this.institutionChildrenChannel.unsubscribe();
+    if (this.familyCatalogRefreshTimer) clearInterval(this.familyCatalogRefreshTimer);
+  }
+
   toggleMobileMenu(): void { this.mobileMenuOpen = !this.mobileMenuOpen; }
   requestSignOut(): void {
     void this.router.navigateByUrl('/dashboard', { state: { familyDashboardAction: 'confirm-sign-out' } });
-  }
-
-  toggleDemoProposals(): void {
-    this.showDemoProposals = !this.showDemoProposals;
-    this.resetFilters();
   }
 
   setSearch(event: Event): void {
@@ -143,11 +137,133 @@ export class CatalogPage {
   nextPage(): void { this.setPage(this.currentPage + 1); }
   openProposalDetails(proposalId: string): void { this.selectedProposalId = proposalId; }
   closeProposalDetails(): void { this.selectedProposalId = null; }
+  hasExpressedInterest(childId: string): boolean { return this.interestedChildIds.has(childId); }
+  async confirmExpressInterest(childId: string): Promise<void> {
+    if (this.isInstitutionView || this.interestBusyId) return;
+    const proposal = this.proposals.find((item) => item.id === childId);
+    if (!proposal) return;
+    const alert = await this.alertController.create({
+      header: 'Confirmar elección',
+      message: `¿Estás seguro de que quieres elegir a ${proposal.title}? Después de aceptar, ya no podrás volver al catálogo. La institución coordinará una cita para que puedas conocerlo.`,
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        { text: 'Aceptar', role: 'confirm' },
+      ],
+    });
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    if (role !== 'confirm') return;
+    await this.expressInterest(childId);
+  }
+
+  private async expressInterest(childId: string): Promise<void> {
+    if (this.isInstitutionView || this.interestBusyId) return;
+    this.interestBusyId = childId;
+    this.interestNotice = '';
+    try {
+      await this.supabase.expressChildInterest(childId);
+      this.interestedChildIds.add(childId);
+      await this.router.navigateByUrl('/dashboard', { state: { familyDashboardSection: 'inicio' } });
+    } catch (error) {
+      this.interestNotice = error instanceof Error ? error.message : 'No se pudo enviar tu interés.';
+      if (this.interestNotice.includes('ya fue seleccionado') || this.interestNotice.includes('ya no está disponible')) {
+        void this.refreshFamilyCatalog();
+      }
+    } finally {
+      this.interestBusyId = null;
+      this.changeDetector.markForCheck();
+    }
+  }
   statusLabel(status: ProposalStatus): string {
     const labels: Record<ProposalStatus, string> = {
       disponible: 'Disponible', pendiente: 'Pendiente', aceptada: 'Aceptada', rechazada: 'Rechazada',
     };
     return labels[status];
+  }
+
+  private async loadCatalog(): Promise<void> {
+    this.isLoading = true;
+    this.loadError = '';
+    try {
+      const { data, error } = await this.supabase.client.auth.getUser();
+      if (error) throw error;
+      if (!data.user) throw new Error('Inicia sesión para consultar el catálogo.');
+      this.isInstitutionView = (await this.supabase.getDestinationForUser(data.user.id)) === '/institucion';
+      if (this.isInstitutionView) {
+        const children = await this.supabase.listInstitutionChildren();
+        this.proposals = children.map((child) => this.toProposal(child));
+        this.institutionChildrenChannel = this.supabase.client.channel(`institution-catalog-${data.user.id}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'institution_children', filter: `institution_id=eq.${data.user.id}` }, () => {
+            void this.refreshInstitutionProfiles();
+          })
+          .subscribe();
+      } else {
+        const cases = await this.supabase.listChildInterestCases();
+        this.interestedChildIds = new Set(cases.flatMap((item) => item.child_id ? [item.child_id] : []));
+        if (cases.length) {
+          await this.router.navigateByUrl('/dashboard', { state: { familyDashboardSection: 'inicio' } });
+          return;
+        }
+        const children = await this.supabase.listFamilyCatalogChildren();
+        this.proposals = children.map((child) => this.toProposal(child));
+        this.startFamilyCatalogRefresh();
+      }
+    } catch (error) {
+      this.loadError = error instanceof Error ? error.message : 'No se pudieron cargar los perfiles del catálogo.';
+    } finally {
+      this.isLoading = false;
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  private toProposal(child: InstitutionChildProfile | FamilyCatalogChild): CatalogProposal {
+    return {
+      id: child.id,
+      title: child.name,
+      age: child.age,
+      gender: child.gender === 'Niña' ? 'niña' : 'niño',
+      location: null,
+      summary: child.summary,
+      details: child.summary,
+      institution: child.institution_name,
+      interests: child.interests ?? [],
+      characteristics: child.characteristics ?? [],
+      photoUrl: child.photo_url ?? null,
+      status: 'disponible',
+      tone: child.gender === 'Niña' ? 'Rosa' : 'Azul',
+    };
+  }
+
+  private async refreshInstitutionProfiles(): Promise<void> {
+    try {
+      const children = await this.supabase.listInstitutionChildren();
+      this.proposals = children.map((child) => this.toProposal(child));
+      this.currentPage = Math.min(this.currentPage, Math.max(1, this.totalPages));
+      this.loadError = '';
+    } catch (error) {
+      this.loadError = error instanceof Error ? error.message : 'No se pudieron actualizar los perfiles del catálogo.';
+    } finally {
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  private startFamilyCatalogRefresh(): void {
+    if (this.familyCatalogRefreshTimer) clearInterval(this.familyCatalogRefreshTimer);
+    this.familyCatalogRefreshTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') void this.refreshFamilyCatalog();
+    }, 15000);
+  }
+
+  private async refreshFamilyCatalog(): Promise<void> {
+    try {
+      const children = await this.supabase.listFamilyCatalogChildren();
+      this.proposals = children.map((child) => this.toProposal(child));
+      this.currentPage = Math.min(this.currentPage, Math.max(1, this.totalPages));
+      if (this.selectedProposalId && !this.proposals.some((proposal) => proposal.id === this.selectedProposalId)) {
+        this.selectedProposalId = null;
+      }
+      this.changeDetector.markForCheck();
+    } catch { /* El catálogo actual se conserva si una actualización temporal falla. */ }
   }
 
   private matchesAge(age: number | null): boolean {
@@ -158,14 +274,4 @@ export class CatalogPage {
     return age >= minimum && age <= maximum;
   }
 
-  private createDemoProposal(id: string, title: string, gender: ProposalGender, age: number, tone: string, summary: string): CatalogProposal {
-    return {
-      id, title, gender, age, location: null, summary,
-      details: 'Ficha de demostración creada para mostrar cómo se organizaría la información. No corresponde a un menor ni a una propuesta real.',
-      institution: `Institución de prueba ${id.split('-')[1]} · dato ficticio`,
-      interests: ['Dibujo y actividades creativas', 'Música y canciones', 'Cuentos ilustrados'],
-      characteristics: ['Contenido de ejemplo', 'Sin datos identificables', 'No representa un perfil real'],
-      photoUrl: null, status: 'disponible', isDemo: true, tone,
-    };
-  }
 }

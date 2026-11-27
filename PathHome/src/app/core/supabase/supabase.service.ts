@@ -35,8 +35,13 @@ export interface FamilyDocument {
 export interface FamilyCase {
   family_id: string; full_name: string; email: string; status: 'pendiente' | 'aprobada' | 'rechazada'; approved_at: string | null; documents: FamilyDocument[];
 }
+export interface PsychologistFamilyCase extends Omit<FamilyCase, 'status'> {
+  status: FamilyCase['status'] | 'finalizado';
+  psychologist_id?: string | null; assigned_to_me?: boolean; available_for_claim?: boolean;
+}
 export interface FamilyAppointment {
-  id: string; family_id: string; psychologist_id: string; title: string; appointment_date: string; appointment_time: string; note: string | null; created_at: string;
+  id: string; family_id: string; psychologist_id: string | null; title: string; appointment_date: string; appointment_time: string; appointment_location: string | null; note: string | null; created_at: string;
+  child_interest_case_id?: string | null; appointment_type?: string;
   family_name?: string;
   attended_at?: string | null;
 }
@@ -71,6 +76,47 @@ export interface InstitutionNotification {
   read_at: string | null;
 }
 
+export interface InstitutionChildProfile {
+  id: string;
+  institution_id: string;
+  name: string;
+  age: number;
+  gender: 'Niño' | 'Niña';
+  institution_name: string;
+  summary: string | null;
+  characteristics: string[];
+  interests: string[];
+  photo_path: string | null;
+  photo_url?: string | null;
+  created_at: string;
+}
+
+export interface FamilyCatalogChild {
+  id: string;
+  name: string;
+  age: number;
+  gender: 'Niño' | 'Niña';
+  institution_name: string;
+  summary: string | null;
+  characteristics: string[];
+  interests: string[];
+  photo_path: string | null;
+  photo_url: string | null;
+}
+
+export interface ChildInterestCase {
+  id: string; child_id: string | null; child_name: string; child_age: number | null; family_id: string | null; family_name: string;
+  institution_id: string | null; psychologist_id: string | null; status: string; institution_decision: string | null;
+  institution_observations: string | null; created_at: string; appointment_id: string | null;
+  appointment_type: string | null; appointment_date: string | null; appointment_time: string | null;
+  appointment_note: string | null; appointment_location: string | null; attended_at: string | null; report_id: string | null;
+  report_type: string | null; report_status: string | null; report_observations: string | null;
+  report_strengths: string | null; report_concerns: string | null; report_recommendation: string | null; report_reason: string | null;
+  family_home_address?: string | null;
+}
+
+type InstitutionChildInput = Omit<InstitutionChildProfile, 'id' | 'institution_id' | 'created_at' | 'photo_path' | 'photo_url'>;
+
 @Injectable({ providedIn: 'root' })
 export class SupabaseService {
   get isConfigured(): boolean {
@@ -88,6 +134,145 @@ export class SupabaseService {
     }
 
     return client;
+  }
+
+  async createInstitutionChild(input: InstitutionChildInput, photo?: File): Promise<void> {
+    const { data, error: authError } = await this.client.auth.getUser();
+    if (authError) throw authError;
+    if (!data.user) throw new Error('Inicia sesión nuevamente para registrar el perfil.');
+    const id = crypto.randomUUID();
+    const photoPath = photo ? await this.uploadInstitutionChildPhoto(data.user.id, id, photo) : null;
+    const { error } = await this.client.from('institution_children').insert({ ...input, id, institution_id: data.user.id, photo_path: photoPath });
+    if (error) {
+      if (photoPath) await this.client.storage.from('institution-child-photos').remove([photoPath]);
+      throw error;
+    }
+  }
+
+  async listInstitutionChildren(): Promise<InstitutionChildProfile[]> {
+    const { data, error } = await this.client.from('institution_children').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    const profiles = (data ?? []) as InstitutionChildProfile[];
+    return Promise.all(profiles.map(async (profile) => {
+      if (!profile.photo_path) return { ...profile, photo_url: null };
+      const { data: signed, error: photoError } = await this.client.storage.from('institution-child-photos').createSignedUrl(profile.photo_path, 3600);
+      if (photoError) throw photoError;
+      return { ...profile, photo_url: signed.signedUrl };
+    }));
+  }
+
+  async listFamilyCatalogChildren(): Promise<FamilyCatalogChild[]> {
+    const { data, error } = await this.client.rpc('family_list_catalog_children');
+    if (error?.code === 'PGRST202' || error?.code === '42883') {
+      throw new Error('Falta actualizar el catálogo en Supabase. Ejecuta la migración institution_children.sql.');
+    }
+    if (error) throw error;
+    const children = (data ?? []) as FamilyCatalogChild[];
+    return Promise.all(children.map(async (child) => {
+      if (!child.photo_path) return { ...child, photo_url: null };
+      const { data: signed, error: photoError } = await this.client.storage.from('institution-child-photos').createSignedUrl(child.photo_path, 3600);
+      if (photoError) throw photoError;
+      return { ...child, photo_url: signed.signedUrl };
+    }));
+  }
+
+  async expressChildInterest(childId: string): Promise<string> {
+    const { data, error } = await this.client.rpc('family_express_child_interest', { target_child_id: childId });
+    if (error) throw error;
+    return data as string;
+  }
+
+  async listChildInterestCases(): Promise<ChildInterestCase[]> {
+    const { data, error } = await this.client.rpc('child_case_list');
+    if (error) throw error;
+    return (data ?? []) as ChildInterestCase[];
+  }
+
+  async claimChildInterestCase(caseId: string): Promise<void> {
+    const { error } = await this.client.rpc('psychologist_claim_child_case', { target_case_id: caseId });
+    if (error) throw error;
+  }
+
+  async scheduleChildCaseAppointment(input: { caseId: string; type: 'visita_inicial' | 'visita_hogar' | 'entrega'; date: string; time: string; location: string; note: string }): Promise<void> {
+    const { error } = await this.client.rpc('child_case_schedule_appointment', {
+      target_case_id: input.caseId, appointment_kind: input.type, target_date: input.date, target_time: input.time, appointment_note: input.note || null, target_location: input.location.trim(),
+    });
+    if (error) throw error;
+  }
+
+  async confirmChildCaseAppointment(appointmentId: string): Promise<void> {
+    const { error } = await this.client.rpc('child_case_confirm_appointment', { target_appointment_id: appointmentId });
+    if (error) throw error;
+  }
+
+  async updateInitialVisitAppointment(input: { caseId: string; date: string; time: string; location: string; note: string }): Promise<void> {
+    const { error } = await this.client.rpc('institution_update_initial_visit', {
+      target_case_id: input.caseId, target_date: input.date, target_time: input.time, target_note: input.note || null, target_location: input.location.trim(),
+    });
+    if (error) throw error;
+  }
+
+  async deleteInitialVisitAppointment(caseId: string): Promise<void> {
+    const { error } = await this.client.rpc('institution_delete_initial_visit', { target_case_id: caseId });
+    if (error) throw error;
+  }
+
+  async submitChildCaseReport(input: { caseId: string; observations: string; strengths: string; concerns: string; recommendation: string }): Promise<void> {
+    const { error } = await this.client.rpc('child_case_submit_report', {
+      target_case_id: input.caseId, observations: input.observations, strengths: input.strengths,
+      concerns: input.concerns, recommendation: input.recommendation,
+    });
+    if (error) throw error;
+  }
+
+  async decideInstitutionVisitReport(reportId: string, approve: boolean, reason: string): Promise<void> {
+    const { error } = await this.client.rpc('psychologist_decide_institution_visit_report', { target_report_id: reportId, approve, decision_note: reason || null });
+    if (error) throw error;
+  }
+
+  async decideHomeEvaluation(caseId: string, favorable: boolean, reason: string): Promise<void> {
+    const { error } = await this.client.rpc('institution_decide_home_evaluation', { target_case_id: caseId, favorable, decision_note: reason || null });
+    if (error) throw error;
+  }
+
+  async closeChildInterestCase(caseId: string): Promise<void> {
+    const { error } = await this.client.rpc('psychologist_close_child_case', { target_case_id: caseId });
+    if (error) throw error;
+  }
+
+  async updateInstitutionChild(id: string, input: InstitutionChildInput, photo?: File): Promise<void> {
+    const { data: current, error: readError } = await this.client.from('institution_children').select('institution_id, photo_path').eq('id', id).single();
+    if (readError) throw readError;
+    const newPhotoPath = photo ? await this.uploadInstitutionChildPhoto(current.institution_id, crypto.randomUUID(), photo) : null;
+    const updates = newPhotoPath ? { ...input, photo_path: newPhotoPath } : input;
+    const { error } = await this.client.from('institution_children').update(updates).eq('id', id);
+    if (error) {
+      if (newPhotoPath) await this.client.storage.from('institution-child-photos').remove([newPhotoPath]);
+      throw error;
+    }
+    if (newPhotoPath && current.photo_path) {
+      const { error: cleanupError } = await this.client.storage.from('institution-child-photos').remove([current.photo_path]);
+      if (cleanupError) throw cleanupError;
+    }
+  }
+
+  async deleteInstitutionChild(id: string): Promise<void> {
+    const { data: current, error: readError } = await this.client.from('institution_children').select('photo_path').eq('id', id).single();
+    if (readError) throw readError;
+    const { error } = await this.client.from('institution_children').delete().eq('id', id);
+    if (error) throw error;
+    if (current.photo_path) {
+      const { error: photoError } = await this.client.storage.from('institution-child-photos').remove([current.photo_path]);
+      if (photoError) throw photoError;
+    }
+  }
+
+  private async uploadInstitutionChildPhoto(institutionId: string, fileId: string, file: File): Promise<string> {
+    const extension = file.type === 'image/png' ? 'png' : 'jpg';
+    const path = `${institutionId}/${fileId}.${extension}`;
+    const { error } = await this.client.storage.from('institution-child-photos').upload(path, file, { contentType: file.type, upsert: false });
+    if (error) throw error;
+    return path;
   }
 
   async submitVerification(input: {
@@ -265,6 +450,45 @@ export class SupabaseService {
     return data.signedUrl;
   }
 
+  async getMyFamilyHomeAddress(): Promise<string | null> {
+    const { data: auth, error: authError } = await this.client.auth.getSession();
+    if (authError) throw authError;
+    const userId = auth.session?.user.id;
+    if (!userId) throw new Error('Inicia sesión nuevamente para consultar la dirección del hogar.');
+    const { data, error } = await this.withHomeAddressTimeout(this.client.from('profiles').select('home_address').eq('id', userId).maybeSingle());
+    if (error) throw error;
+    return typeof data?.home_address === 'string' ? data.home_address : null;
+  }
+
+  async updateMyFamilyHomeAddress(address: string): Promise<void> {
+    const { data: auth, error: authError } = await this.client.auth.getSession();
+    if (authError) throw authError;
+    const userId = auth.session?.user.id;
+    if (!userId) throw new Error('Inicia sesión nuevamente para guardar la dirección del hogar.');
+    const { error } = await this.withHomeAddressTimeout(this.client.from('profiles').update({ home_address: address.trim() }).eq('id', userId));
+    if (error) throw error;
+  }
+
+  private async withHomeAddressTimeout<T>(request: PromiseLike<T>): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        Promise.resolve(request),
+        new Promise<T>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('La solicitud está tardando demasiado. Revisa tu conexión e intenta guardar de nuevo.')), 15000);
+        }),
+      ]);
+    } finally {
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+    }
+  }
+
+  async getFamilyHomeAddressForPsychologist(caseId: string): Promise<string | null> {
+    const { data, error } = await this.client.rpc('psychologist_get_child_case_home_address', { target_case_id: caseId });
+    if (error) throw error;
+    return typeof data === 'string' ? data : null;
+  }
+
   async uploadFamilyDocument(file: File, documentType: string): Promise<void> {
     const { data: auth } = await this.client.auth.getUser();
     if (!auth.user) throw new Error('Inicia sesión para subir documentos.');
@@ -325,8 +549,13 @@ export class SupabaseService {
 
   async getMyFamilyOutcome(): Promise<FamilyOutcome | null> {
     const { data, error } = await this.client.rpc('family_latest_report_outcome');
-    if (error) throw error;
-    return (data?.[0] as FamilyOutcome | undefined) ?? null;
+    const missingLegacyRpc = error?.code === 'PGRST202' || error?.code === '42883';
+    if (error && !missingLegacyRpc) throw error;
+    if (missingLegacyRpc) return null;
+    const currentOutcome = data?.[0] as FamilyOutcome | undefined;
+    if (!currentOutcome) return null;
+    if (currentOutcome.status === 'aceptada' && await this.getMyFamilyApprovalStatus() !== 'aprobada') return null;
+    return currentOutcome;
   }
 
   async listMyFamilyNotifications(): Promise<FamilyNotification[]> {
@@ -414,14 +643,19 @@ export class SupabaseService {
     if (error) throw error;
   }
 
-  async listApprovedFamilies(): Promise<FamilyCase[]> {
+  async listApprovedFamilies(): Promise<PsychologistFamilyCase[]> {
     const { data, error } = await this.client.rpc('psychologist_list_approved_families');
     if (error) throw error;
-    return ((data ?? []) as FamilyCase[]).filter((family) => family.documents?.length > 0);
+    return (data ?? []) as PsychologistFamilyCase[];
   }
 
-  async scheduleFamilyAppointment(input: { familyId: string; title: string; date: string; time: string; note: string }): Promise<void> {
-    const { error } = await this.client.from('family_appointments').insert({ family_id: input.familyId, title: input.title, appointment_date: input.date, appointment_time: input.time, note: input.note || null });
+  async claimApprovedFamilyCase(familyId: string): Promise<void> {
+    const { error } = await this.client.rpc('psychologist_claim_family_case', { target_family_id: familyId });
+    if (error) throw error;
+  }
+
+  async scheduleFamilyAppointment(input: { familyId: string; title: string; date: string; time: string; location: string; note: string }): Promise<void> {
+    const { error } = await this.client.from('family_appointments').insert({ family_id: input.familyId, title: input.title, appointment_date: input.date, appointment_time: input.time, appointment_location: input.location.trim(), note: input.note || null });
     if (error) throw error;
   }
 
@@ -469,9 +703,9 @@ export class SupabaseService {
     return (data ?? []) as FamilyPsychReport[];
   }
 
-  async updateFamilyAppointment(id: string, input: { familyId: string; date: string; time: string; note: string }): Promise<void> {
+  async updateFamilyAppointment(id: string, input: { familyId: string; date: string; time: string; location: string; note: string }): Promise<void> {
     const { error } = await this.client.from('family_appointments')
-      .update({ family_id: input.familyId, appointment_date: input.date, appointment_time: input.time, note: input.note || null })
+      .update({ family_id: input.familyId, appointment_date: input.date, appointment_time: input.time, appointment_location: input.location.trim(), note: input.note || null })
       .eq('id', id);
     if (error) throw error;
   }

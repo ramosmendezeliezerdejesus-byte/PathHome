@@ -2,9 +2,10 @@ import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { IonContent } from '@ionic/angular';
-import { FamilyCase, FamilyNotification, FamilyPsychReport, SupabaseService } from '../core/supabase/supabase.service';
+import { ChildInterestCase, FamilyNotification, FamilyPsychReport, PsychologistFamilyCase, SupabaseService } from '../core/supabase/supabase.service';
+import { AppointmentSchedulerComponent, AppointmentSchedulerDraft, AppointmentSchedulerFamilyOption } from '../shared/appointment-scheduler/appointment-scheduler.component';
 
-type PsychologistSection = 'inicio' | 'expedientes' | 'evaluaciones' | 'citas' | 'informes' | 'notificaciones' | 'perfil';
+type PsychologistSection = 'inicio' | 'expedientes' | 'evaluaciones' | 'citas' | 'informes' | 'notificaciones' | 'perfil' | 'casos';
 type RecordStatus = 'Pendiente' | 'En progreso' | 'Completada';
 
 interface ChildInfo {
@@ -48,6 +49,8 @@ interface NotificationItem {
     './psychologist.case-table.scss',
     './psychologist.case-detail.scss',
     './psychologist.case-workspace.scss',
+    './psychologist.institution-report.scss',
+    './psychologist.completed-cases.scss',
     './psychologist.evaluations.scss',
     './psychologist.evaluation-table.scss',
     './psychologist.evaluation-form.scss',
@@ -56,7 +59,7 @@ interface NotificationItem {
     './psychologist.notifications.scss',
   ],
   standalone: true,
-  imports: [IonContent, FormsModule],
+  imports: [IonContent, FormsModule, AppointmentSchedulerComponent],
 })
 export class PsychologistPage implements OnDestroy {
   activeSection: PsychologistSection = 'inicio';
@@ -64,23 +67,31 @@ export class PsychologistPage implements OnDestroy {
   notificationsEnabled = true;
   nextEvaluationId = 3;
   appointmentFeedback = '';
+  familyAssignmentFeedback = '';
+  familyAssignmentError = '';
   evaluationFeedback = '';
   reportFeedback = '';
   profileFeedback = '';
   profilePhotoUrl = '';
   caseSearch = '';
   selectedCase: PsychologistCase | null = null;
-  selectedPsychologistFamily: FamilyCase | null = null;
-  approvedFamilies: FamilyCase[] = [];
+  selectedPsychologistFamily: PsychologistFamilyCase | null = null;
+  approvedFamilies: PsychologistFamilyCase[] = [];
   psychologistAppointments: import('../core/supabase/supabase.service').FamilyAppointment[] = [];
   familyPsychReports: FamilyPsychReport[] = [];
+  childInterestCases: ChildInterestCase[] = [];
+  workflowBusyCaseId: string | null = null;
+  workflowNotice = '';
+  workflowError = '';
+  workflowDecisionReason = '';
+  workflowDraft = { date: '', time: '', location: '', note: '', observations: '', strengths: '', concerns: '', recommendation: '' };
   reportAppointmentId: string | null = null;
   editingReportId: string | null = null;
   deletingReportId: string | null = null;
   reportSaving = false;
   readonly familyReportDraft = { observations: '', strengths: '', concerns: '', recommendation: '' };
   editingAppointmentId: string | null = null;
-  familyAppointmentDraft = { familyId: '', date: '', time: '', note: '' };
+  familyAppointmentDraft = { familyId: '', date: '', time: '', location: '', note: '' };
   calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   selectedCalendarDate = this.toDateKey(new Date());
   selectedEvaluationId: number | null = null;
@@ -90,12 +101,14 @@ export class PsychologistPage implements OnDestroy {
   notificationError = '';
   notificationsLoading = false;
   private authSubscription: { unsubscribe: () => void } | null = null;
+  private workflowNotificationChannel: { unsubscribe: () => Promise<unknown> } | null = null;
   private workspaceLoadPromise: Promise<void> | null = null;
   private workspaceReloadRequested = false;
 
   readonly sections: { id: PsychologistSection; label: string }[] = [
     { id: 'inicio', label: 'Inicio' },
     { id: 'expedientes', label: 'Expedientes' },
+    { id: 'casos', label: 'Casos de vinculación' },
     { id: 'evaluaciones', label: 'Evaluaciones' },
     { id: 'citas', label: 'Citas' },
     { id: 'informes', label: 'Informes' },
@@ -160,6 +173,7 @@ export class PsychologistPage implements OnDestroy {
 
   ngOnDestroy(): void {
     this.authSubscription?.unsubscribe();
+    if (this.workflowNotificationChannel) void this.workflowNotificationChannel.unsubscribe();
   }
 
   private loadWorkspaceData(): Promise<void> {
@@ -172,6 +186,7 @@ export class PsychologistPage implements OnDestroy {
       this.loadApprovedFamilies(),
       this.loadPsychologistAppointments(),
       this.loadPsychologistReports(),
+      this.loadChildInterestCases(),
       this.loadNotifications(),
     ]).then(() => undefined).finally(() => {
       this.changeDetector.detectChanges();
@@ -187,9 +202,47 @@ export class PsychologistPage implements OnDestroy {
   private async loadApprovedFamilies(): Promise<void> {
     try {
       this.approvedFamilies = await this.supabase.listApprovedFamilies();
-      if (!this.familyAppointmentDraft.familyId && this.approvedFamilies.length) this.familyAppointmentDraft.familyId = this.approvedFamilies[0].family_id;
+      if (!this.assignedFamilies.some((family) => family.family_id === this.familyAppointmentDraft.familyId)) {
+        this.familyAppointmentDraft.familyId = this.assignedFamilies[0]?.family_id ?? '';
+      }
     } catch { /* Supabase migration may not be installed yet. */ }
     finally { this.changeDetector.detectChanges(); }
+  }
+
+  private familyHasFinalizedChildCase(familyId: string): boolean {
+    return this.completedChildInterestCases.some((item) => item.family_id === familyId);
+  }
+
+  private familyHasStartedWork(familyId: string): boolean {
+    if (this.familyHasFinalizedChildCase(familyId)) return false;
+    if (this.childInterestCases.some((item) => item.family_id === familyId && item.status !== 'finalizado')) return true;
+    const reports = this.familyPsychReports.filter((item) => item.family_id === familyId);
+    if (reports.some((report) => report.status === 'pendiente' || report.status === 'rechazada')) return true;
+    const today = this.toDateKey(new Date());
+    return this.psychologistAppointments.some((appointment) => {
+      if (appointment.family_id !== familyId || appointment.child_interest_case_id) return false;
+      if (!appointment.attended_at) return appointment.appointment_date >= today;
+      return !reports.some((report) => report.appointment_id === appointment.id);
+    });
+  }
+
+  get assignedFamilies(): PsychologistFamilyCase[] {
+    return this.approvedFamilies.filter((family) => family.assigned_to_me && !this.familyHasFinalizedChildCase(family.family_id));
+  }
+  get availableFamilyCases(): PsychologistFamilyCase[] { return this.approvedFamilies.filter((family) => family.available_for_claim); }
+  get completedFamilyCases(): PsychologistFamilyCase[] { return this.approvedFamilies.filter((family) => family.status === 'finalizado'); }
+  get activeOrAvailableFamilies(): PsychologistFamilyCase[] { return this.approvedFamilies.filter((family) => family.status === 'aprobada'); }
+
+  get activePsychologistCaseSummary(): string {
+    const childCase = this.childInterestCases.find((item) => item.psychologist_id && item.status !== 'finalizado' && item.family_id);
+    if (childCase) return `Tu expediente activo es el de ${childCase.family_name}, por la vinculación de ${childCase.child_name}.`;
+    const assignedFamily = this.assignedFamilies.find((family) => this.familyHasStartedWork(family.family_id));
+    if (assignedFamily) return `Tu expediente activo es el de la familia ${assignedFamily.full_name}.`;
+    const appointment = this.psychologistAppointments.find((item) => this.familyHasStartedWork(item.family_id) && !item.child_interest_case_id);
+    if (appointment) return `Tu expediente activo es el de la familia ${appointment.family_name ?? 'registrada en esta cita'}.`;
+    const report = this.familyPsychReports.find((item) => (item.status === 'pendiente' || item.status === 'rechazada') && !this.familyHasFinalizedChildCase(item.family_id));
+    if (report) return `Tu expediente activo es el de la familia ${report.family_name}.`;
+    return '';
   }
 
   private async loadPsychologistAppointments(): Promise<void> {
@@ -204,10 +257,135 @@ export class PsychologistPage implements OnDestroy {
     finally { this.changeDetector.detectChanges(); }
   }
 
+  async loadChildInterestCases(): Promise<void> {
+    try {
+      const cases = await this.supabase.listChildInterestCases();
+      this.childInterestCases = await Promise.all(cases.map(async (item) => {
+        if (item.status !== 'visita_hogar_disponible' || !item.psychologist_id) return item;
+        try {
+          const familyHomeAddress = await this.supabase.getFamilyHomeAddressForPsychologist(item.id);
+          return { ...item, family_home_address: familyHomeAddress };
+        } catch { return { ...item, family_home_address: null }; }
+      }));
+    }
+    catch { this.childInterestCases = []; }
+    finally { this.changeDetector.detectChanges(); }
+  }
+
+  get psychologistHasActiveInterestCase(): boolean {
+    return this.childInterestCases.some((item) => item.psychologist_id && item.status !== 'finalizado' && item.family_id !== null)
+      || this.assignedFamilies.some((family) => this.familyHasStartedWork(family.family_id))
+      || this.psychologistAppointments.some((item) => this.familyHasStartedWork(item.family_id))
+      || this.familyPsychReports.some((item) => this.familyHasStartedWork(item.family_id));
+  }
+  get activeChildInterestCases(): ChildInterestCase[] { return this.childInterestCases.filter((item) => item.status !== 'finalizado'); }
+  get completedChildInterestCases(): ChildInterestCase[] { return this.childInterestCases.filter((item) => item.status === 'finalizado'); }
+  isOtherPsychologistCase(item: ChildInterestCase): boolean { return !!item.psychologist_id && item.family_id === null; }
+
+  async claimApprovedFamilyCase(family: PsychologistFamilyCase): Promise<void> {
+    this.familyAssignmentError = '';
+    this.familyAssignmentFeedback = '';
+    if (!family.available_for_claim || this.psychologistHasActiveInterestCase) {
+      this.familyAssignmentError = this.psychologistHasActiveInterestCase
+        ? `${this.activePsychologistCaseSummary} No puedes tomar otro expediente todavía.`
+        : 'Este expediente ya fue tomado por otro psicólogo.';
+      return;
+    }
+    this.workflowBusyCaseId = family.family_id;
+    try {
+      await this.supabase.claimApprovedFamilyCase(family.family_id);
+      this.familyAssignmentFeedback = `Tomaste el expediente de ${family.full_name}. Ya puedes revisar sus documentos y continuar su evaluación.`;
+      await this.loadApprovedFamilies();
+      this.selectedPsychologistFamily = this.approvedFamilies.find((item) => item.family_id === family.family_id) ?? null;
+    } catch (error) {
+      this.familyAssignmentError = error instanceof Error ? error.message : 'No se pudo tomar el expediente.';
+      await this.loadApprovedFamilies();
+      this.selectedPsychologistFamily = this.approvedFamilies.find((item) => item.family_id === family.family_id) ?? null;
+    } finally {
+      this.workflowBusyCaseId = null;
+      this.changeDetector.detectChanges();
+    }
+  }
+
+  async claimInterestCase(item: ChildInterestCase): Promise<void> {
+    this.workflowBusyCaseId = item.id; this.workflowError = ''; this.workflowNotice = '';
+    try { await this.supabase.claimChildInterestCase(item.id); this.workflowNotice = 'El caso quedó asignado exclusivamente a ti.'; await this.loadChildInterestCases(); }
+    catch (error) { this.workflowError = error instanceof Error ? error.message : 'No se pudo tomar el caso.'; }
+    finally { this.workflowBusyCaseId = null; this.changeDetector.detectChanges(); }
+  }
+
+  async scheduleWorkflowAppointment(item: ChildInterestCase, draft?: AppointmentSchedulerDraft): Promise<void> {
+    const date = draft?.date ?? this.workflowDraft.date;
+    const time = draft?.time ?? this.workflowDraft.time;
+    const location = item.family_home_address?.trim() ?? '';
+    const note = draft?.note ?? this.workflowDraft.note;
+    if (!date || !time) { this.workflowError = 'Selecciona fecha y hora.'; return; }
+    if (!location) { this.workflowError = 'La familia debe registrar la dirección de su hogar antes de agendar la visita.'; return; }
+    this.workflowBusyCaseId = item.id; this.workflowError = '';
+    try {
+      await this.supabase.scheduleChildCaseAppointment({ caseId: item.id, type: 'visita_hogar', date, time, location, note });
+      this.workflowNotice = 'Visita al hogar agendada. La familia y la institución recibieron el aviso.';
+      this.workflowDraft = { ...this.workflowDraft, date: '', time: '', location: '', note: '' };
+      this.workflowBusyCaseId = null;
+      this.changeDetector.detectChanges();
+      void this.loadChildInterestCases();
+    }
+    catch (error) { this.workflowError = error instanceof Error ? error.message : 'No se pudo agendar la visita.'; }
+    finally { this.workflowBusyCaseId = null; this.changeDetector.detectChanges(); }
+  }
+
+  async confirmWorkflowAppointment(item: ChildInterestCase): Promise<void> {
+    if (!item.appointment_id || !item.appointment_date || item.appointment_date > new Date().toISOString().slice(0,10)) { this.workflowError = 'La asistencia se confirma el día de la cita o después.'; return; }
+    this.workflowBusyCaseId = item.id;
+    try { await this.supabase.confirmChildCaseAppointment(item.appointment_id); this.workflowNotice = item.status === 'cita_entrega_programada' ? 'Entrega confirmada. Cierra el caso para marcarlo como finalizado.' : 'Visita confirmada. Completa la evaluación del hogar.'; await this.loadChildInterestCases(); }
+    catch (error) { this.workflowError = this.readWorkflowError(error, 'No se pudo confirmar la cita.'); }
+    finally { this.workflowBusyCaseId = null; this.changeDetector.detectChanges(); }
+  }
+
+  async submitWorkflowEvaluation(item: ChildInterestCase): Promise<void> {
+    const d = this.workflowDraft;
+    if (!d.observations.trim() || !d.recommendation.trim()) { this.workflowError = 'Completa observaciones y recomendación.'; return; }
+    this.workflowError = '';
+    this.workflowNotice = '';
+    this.workflowBusyCaseId = item.id;
+    try {
+      await this.supabase.submitChildCaseReport({ caseId: item.id, observations: d.observations.trim(), strengths: d.strengths.trim(), concerns: d.concerns.trim(), recommendation: d.recommendation.trim() });
+      this.workflowNotice = 'Evaluación enviada a la institución responsable.';
+      this.workflowDraft = { ...d, observations: '', strengths: '', concerns: '', recommendation: '' };
+      this.workflowBusyCaseId = null;
+      this.changeDetector.detectChanges();
+      void this.loadChildInterestCases();
+    }
+    catch (error) { this.workflowError = this.readWorkflowError(error, 'No se pudo enviar la evaluación.'); }
+    finally { this.workflowBusyCaseId = null; this.changeDetector.detectChanges(); }
+  }
+
+  private readWorkflowError(error: unknown, fallback: string): string {
+    if (error instanceof Error && error.message.trim()) return error.message;
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.trim()) return error.message;
+    return fallback;
+  }
+
+  async reviewInstitutionReport(item: ChildInterestCase, approve: boolean): Promise<void> {
+    if (!item.report_id) return;
+    this.workflowBusyCaseId = item.id;
+    try { await this.supabase.decideInstitutionVisitReport(item.report_id, approve, this.workflowDecisionReason); this.workflowNotice = approve ? 'Informe aprobado. Ya puedes programar la visita al hogar.' : 'Informe devuelto a la institución para corregirlo.'; this.workflowDecisionReason = ''; await this.loadChildInterestCases(); }
+    catch (error) { this.workflowError = error instanceof Error ? error.message : 'No se pudo registrar la revisión.'; }
+    finally { this.workflowBusyCaseId = null; this.changeDetector.detectChanges(); }
+  }
+
+  async closeInterestCase(item: ChildInterestCase): Promise<void> {
+    this.workflowBusyCaseId = item.id;
+    try { await this.supabase.closeChildInterestCase(item.id); this.workflowNotice = 'Caso cerrado. Tu disponibilidad para tomar otro caso fue restablecida.'; await this.loadChildInterestCases(); }
+    catch (error) { this.workflowError = error instanceof Error ? error.message : 'No se pudo cerrar el caso.'; }
+    finally { this.workflowBusyCaseId = null; this.changeDetector.detectChanges(); }
+  }
+
   private async loadNotifications(): Promise<void> {
     this.notificationsLoading = true;
     try {
       const rows = await this.supabase.listMyFamilyNotifications();
+      await this.subscribeToWorkflowNotifications();
       this.notifications = rows.map((item: FamilyNotification) => ({
         id: item.id,
         category: item.title === 'Familia lista para evaluación' ? 'Expedientes' : item.category === 'cita' ? 'Citas' : item.category === 'documento' ? 'Expedientes' : 'Sistema',
@@ -227,6 +405,24 @@ export class PsychologistPage implements OnDestroy {
       this.notificationsLoading = false;
       this.changeDetector.detectChanges();
     }
+  }
+
+  private async subscribeToWorkflowNotifications(): Promise<void> {
+    if (this.workflowNotificationChannel) return;
+    const { data, error } = await this.supabase.client.auth.getSession();
+    const psychologistId = data.session?.user.id;
+    if (error || !psychologistId) return;
+    this.workflowNotificationChannel = this.supabase.client.channel(`psychologist-case-notifications-${psychologistId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'family_notifications', filter: `family_id=eq.${psychologistId}` }, () => {
+        void this.loadNotifications();
+        void this.loadApprovedFamilies();
+        void this.loadChildInterestCases();
+        void this.loadPsychologistAppointments();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'family_cases' }, () => {
+        void this.loadApprovedFamilies();
+      })
+      .subscribe();
   }
 
   get calendarMonthLabel(): string {
@@ -288,7 +484,9 @@ export class PsychologistPage implements OnDestroy {
     return new Date(value).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
-  openApprovedFamily(family: FamilyCase): void {
+  openApprovedFamily(family: PsychologistFamilyCase): void {
+    this.familyAssignmentFeedback = '';
+    this.familyAssignmentError = '';
     this.selectedPsychologistFamily = family;
   }
 
@@ -296,19 +494,24 @@ export class PsychologistPage implements OnDestroy {
     this.selectedPsychologistFamily = null;
   }
 
-  scheduleFamilyFromRecord(family: FamilyCase): void {
+  scheduleFamilyFromRecord(family: PsychologistFamilyCase): void {
     this.familyAppointmentDraft.familyId = family.family_id;
     this.showSection('citas');
   }
 
-  async scheduleApprovedFamilyAppointment(): Promise<void> {
-    const family = this.approvedFamilies.find((item) => item.family_id === this.familyAppointmentDraft.familyId);
-    if (!family || !this.familyAppointmentDraft.date || !this.familyAppointmentDraft.time) {
-      this.appointmentFeedback = 'Elige una familia aprobada, fecha y hora.';
+  async scheduleApprovedFamilyAppointment(draft?: AppointmentSchedulerDraft): Promise<void> {
+    const familyId = draft?.familyId ?? this.familyAppointmentDraft.familyId;
+    const date = draft?.date ?? this.familyAppointmentDraft.date;
+    const time = draft?.time ?? this.familyAppointmentDraft.time;
+    const location = draft?.location ?? this.familyAppointmentDraft.location;
+    const note = draft?.note ?? this.familyAppointmentDraft.note;
+    const family = this.assignedFamilies.find((item) => item.family_id === familyId);
+    if (!family || !date || !time || !location.trim()) {
+      this.appointmentFeedback = 'Elige una familia aprobada y completa la fecha, la hora y la dirección.';
       return;
     }
     try {
-      const details = { familyId: family.family_id, date: this.familyAppointmentDraft.date, time: this.familyAppointmentDraft.time, note: this.familyAppointmentDraft.note };
+      const details = { familyId: family.family_id, date, time, location, note };
       if (this.editingAppointmentId) {
         await this.supabase.updateFamilyAppointment(this.editingAppointmentId, details);
         this.appointmentFeedback = 'Cita actualizada y visible en la cuenta familiar.';
@@ -321,11 +524,16 @@ export class PsychologistPage implements OnDestroy {
       this.selectedCalendarDate = details.date;
       await this.loadPsychologistAppointments();
       this.editingAppointmentId = null;
-      this.familyAppointmentDraft.familyId = this.approvedFamilies[0]?.family_id ?? '';
+      this.familyAppointmentDraft.familyId = this.assignedFamilies[0]?.family_id ?? '';
       this.familyAppointmentDraft.date = '';
       this.familyAppointmentDraft.time = '';
+      this.familyAppointmentDraft.location = '';
       this.familyAppointmentDraft.note = '';
     } catch (error) { this.appointmentFeedback = error instanceof Error ? error.message : 'No se pudo agendar la cita.'; }
+  }
+
+  get approvedFamilyAppointmentOptions(): AppointmentSchedulerFamilyOption[] {
+    return this.assignedFamilies.map((family) => ({ id: family.family_id, label: `${family.full_name} · ${family.documents.length} documento(s)` }));
   }
 
   async confirmFamilyArrival(appointment: import('../core/supabase/supabase.service').FamilyAppointment): Promise<void> {
@@ -340,7 +548,7 @@ export class PsychologistPage implements OnDestroy {
       this.showSection('informes');
       this.reportFeedback = `Asistencia de ${appointment.family_name ?? 'la familia'} confirmada. Completa el informe para enviarlo a la institución.`;
     } catch (error) {
-      this.appointmentFeedback = error instanceof Error ? error.message : 'No se pudo confirmar la asistencia.';
+      this.appointmentFeedback = this.readWorkflowError(error, 'No se pudo confirmar la asistencia.');
     } finally { this.changeDetector.detectChanges(); }
   }
 
@@ -355,6 +563,7 @@ export class PsychologistPage implements OnDestroy {
       title: 'Evaluación psicológica',
       appointment_date: report.appointment_date,
       appointment_time: report.appointment_time,
+      appointment_location: null,
       note: null,
       created_at: report.created_at,
       family_name: report.family_name,
@@ -437,6 +646,7 @@ export class PsychologistPage implements OnDestroy {
       familyId: appointment.family_id,
       date: appointment.appointment_date,
       time: appointment.appointment_time.slice(0, 5),
+      location: appointment.appointment_location ?? '',
       note: appointment.note ?? '',
     };
     this.appointmentFeedback = '';
@@ -520,6 +730,8 @@ export class PsychologistPage implements OnDestroy {
   showSection(section: PsychologistSection): void {
     this.activeSection = section;
     this.mobileMenuOpen = false;
+    if (section === 'expedientes') void this.loadApprovedFamilies();
+    if (section === 'casos') void this.loadChildInterestCases();
     if (section === 'notificaciones') void this.loadNotifications();
     if (section === 'informes') { void this.loadPsychologistReports(); void this.loadPsychologistAppointments(); }
     if (section !== 'expedientes') this.selectedPsychologistFamily = null;
@@ -575,6 +787,11 @@ export class PsychologistPage implements OnDestroy {
 
   async openNotification(notification: NotificationItem): Promise<void> {
     await this.toggleNotification(notification.id);
+    if (notification.title === 'Nuevo expediente disponible') {
+      await this.loadApprovedFamilies();
+      this.showSection('expedientes');
+      return;
+    }
     const scheduleFromReview = notification.title === 'Familia lista para evaluación'
       || notification.title === 'Familia no aceptada para el catálogo';
     if (!scheduleFromReview || !notification.relatedFamilyId) return;
@@ -582,7 +799,7 @@ export class PsychologistPage implements OnDestroy {
     if (!this.approvedFamilies.some((family) => family.family_id === notification.relatedFamilyId)) {
       await this.loadApprovedFamilies();
     }
-    const family = this.approvedFamilies.find((item) => item.family_id === notification.relatedFamilyId);
+    const family = this.approvedFamilies.find((item) => item.family_id === notification.relatedFamilyId && item.assigned_to_me);
     if (!family) {
       this.notificationError = 'La familia de esta notificación ya no está disponible para agendar.';
       this.changeDetector.detectChanges();

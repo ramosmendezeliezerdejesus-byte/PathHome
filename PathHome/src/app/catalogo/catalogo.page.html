@@ -13,28 +13,14 @@
     <main class="catalog-shell" aria-labelledby="catalog-title">
       <header class="catalog-header">
         <div class="catalog-heading">
-          <p class="catalog-eyebrow">PATHHOME · FAMILIA SOLICITANTE</p>
-          <h1 id="catalog-title">Catálogo de propuestas</h1>
-          <p>Conoce las propuestas de vinculación autorizadas para tu familia.</p>
+          <p class="catalog-eyebrow">PATHHOME · {{ isInstitutionView ? 'PANEL INSTITUCIONAL' : 'FAMILIA SOLICITANTE' }}</p>
+          <h1 id="catalog-title">{{ isInstitutionView ? 'Catálogo institucional' : 'Catálogo de propuestas' }}</h1>
+          <p>{{ isInstitutionView ? 'Perfiles que tu institución ha registrado.' : 'Conoce las propuestas de vinculación autorizadas para tu familia.' }}</p>
         </div>
         <div class="catalog-header-mark" aria-hidden="true">
           <ion-icon name="book-outline"></ion-icon>
         </div>
       </header>
-
-      @if (demoModeActive) {
-        <aside class="demo-notice" role="status">
-          <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
-          <span><strong>Vista demostrativa.</strong> Los ejemplos son ficticios y no representan menores ni propuestas autorizadas.</span>
-          <button type="button" class="demo-toggle" (click)="toggleDemoProposals()">Ocultar ejemplos</button>
-        </aside>
-      } @else if (!proposals.length) {
-        <aside class="demo-notice demo-notice-muted" role="status">
-          <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
-          <span>Mostrando propuestas autorizadas. Esta vista no contiene ejemplos de demostración.</span>
-          <button type="button" class="demo-toggle" (click)="toggleDemoProposals()">Ver ejemplos visuales</button>
-        </aside>
-      }
 
       @if (selectedProposal; as proposal) {
         <section class="proposal-detail-view" aria-labelledby="proposal-detail-title">
@@ -46,15 +32,11 @@
                 @else { <ion-icon name="person-outline"></ion-icon> }
               </div>
               <div class="detail-title-block">
-                <span class="proposal-demo-badge" [class.authorized-badge]="!proposal.isDemo">{{ proposal.isDemo ? 'FICHA FICTICIA · DEMOSTRACIÓN' : statusLabel(proposal.status) }}</span>
+                <span class="proposal-demo-badge authorized-badge">{{ statusLabel(proposal.status) }}</span>
                 <h2 id="proposal-detail-title">{{ proposal.title }}</h2>
-                <p>{{ proposal.isDemo ? 'Información de muestra, sin datos de un menor real.' : 'Información disponible de la propuesta autorizada.' }}</p>
+                <p>{{ isInstitutionView ? 'Perfil registrado por tu institución.' : 'Información disponible de la propuesta autorizada.' }}</p>
               </div>
             </div>
-
-            @if (proposal.isDemo) {
-              <div class="detail-demo-warning"><ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon> Todos los datos de esta ficha son ficticios; no corresponden a un niño, niña ni institución real.</div>
-            }
 
             <div class="detail-info-grid" aria-label="Información general">
               <div class="detail-info-item"><span>Edad</span><strong>{{ proposal.age !== null ? proposal.age + ' años' : 'No indicada' }}</strong></div>
@@ -83,8 +65,10 @@
             </div>
 
             <div class="detail-actions">
-              <button type="button" class="interest-button" disabled><ion-icon name="heart-outline" aria-hidden="true"></ion-icon> Expresar interés</button>
-              <p>Esta acción se habilitará cuando exista una propuesta autorizada y una conexión segura.</p>
+              @if (!isInstitutionView) {
+                <button type="button" class="interest-button" [disabled]="interestBusyId === proposal.id || hasExpressedInterest(proposal.id)" (click)="confirmExpressInterest(proposal.id)"><ion-icon name="heart-outline" aria-hidden="true"></ion-icon> {{ hasExpressedInterest(proposal.id) ? 'Interés enviado' : interestBusyId === proposal.id ? 'Enviando…' : 'Expresar interés' }}</button>
+                @if (interestNotice) { <p role="status">{{ interestNotice }}</p> }
+              }
             </div>
           </article>
         </section>
@@ -120,8 +104,8 @@
 
       <div class="catalog-results-heading">
         <div>
-          <h2>Propuestas disponibles</h2>
-          <p>{{ filteredProposals.length }} {{ demoModeActive ? 'ejemplos visuales' : 'propuestas autorizadas' }}</p>
+          <h2>{{ isInstitutionView ? 'Perfiles registrados' : 'Propuestas disponibles' }}</h2>
+          <p>{{ filteredProposals.length }} {{ isInstitutionView ? 'perfiles' : 'propuestas autorizadas' }}</p>
         </div>
         <span class="privacy-chip"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Acceso protegido</span>
       </div>
@@ -143,7 +127,7 @@
           @for (proposal of paginatedProposals; track proposal.id) {
             <article [class]="'proposal-card tone-' + proposal.tone.toLowerCase()">
               <div class="proposal-card-topline">
-                <span class="proposal-demo-badge"><ion-icon name="sparkles-outline" aria-hidden="true"></ion-icon> {{ proposal.isDemo ? 'DEMO · FICTICIO' : statusLabel(proposal.status) }}</span>
+                <span class="proposal-demo-badge">{{ statusLabel(proposal.status) }}</span>
                 <button type="button" class="save-visual" aria-label="Guardar propuesta visualmente no disponible" disabled><ion-icon name="heart-outline" aria-hidden="true"></ion-icon></button>
               </div>
 
@@ -167,13 +151,15 @@
                 Consultar detalles <ion-icon name="arrow-forward-outline" aria-hidden="true"></ion-icon>
               </button>
 
-              <button type="button" class="interest-button" disabled aria-label="Expresar interés, disponible cuando exista una propuesta autorizada">
-                <ion-icon name="heart-outline" aria-hidden="true"></ion-icon> Expresar interés
-              </button>
-              @if (proposal.isDemo) { <p class="proposal-action-note">Acción no disponible en ejemplos de demostración.</p> }
+              @if (!isInstitutionView) {
+                <button type="button" class="interest-button" [disabled]="interestBusyId === proposal.id || hasExpressedInterest(proposal.id)" (click)="expressInterest(proposal.id)">
+                  <ion-icon name="heart-outline" aria-hidden="true"></ion-icon> {{ hasExpressedInterest(proposal.id) ? 'Interés enviado' : interestBusyId === proposal.id ? 'Enviando…' : 'Expresar interés' }}
+                </button>
+              }
             </article>
           }
         </section>
+        @if (interestNotice) { <p class="catalog-interest-notice" role="status">{{ interestNotice }}</p> }
 
         @if (totalPages > 1) {
           <nav class="catalog-pagination" aria-label="Paginación de propuestas">
@@ -184,12 +170,19 @@
             <button type="button" aria-label="Página siguiente" [disabled]="currentPage === totalPages" (click)="nextPage()"><ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon></button>
           </nav>
         }
-      } @else if (demoModeActive || proposals.length) {
+      } @else if (proposals.length) {
         <section class="catalog-state" role="status">
           <span class="state-icon"><ion-icon name="search-outline" aria-hidden="true"></ion-icon></span>
           <h2>No encontramos resultados</h2>
           <p>Ajusta la búsqueda o los filtros para revisar otras propuestas.</p>
           <button type="button" class="reset-filters" (click)="resetFilters()">Limpiar filtros</button>
+        </section>
+      } @else if (isInstitutionView) {
+        <section class="catalog-state catalog-empty" role="status">
+          <span class="state-icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></span>
+          <h2>Aún no hay perfiles registrados</h2>
+          <p>Registra un niño o niña desde el apartado institucional y aparecerá aquí.</p>
+          <span class="empty-protection"><ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon> Perfiles privados de tu institución</span>
         </section>
       } @else {
         <section class="catalog-state catalog-empty" role="status">
@@ -203,7 +196,7 @@
 
       <footer class="catalog-footer">
         <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
-        <span>La información se limita a propuestas autorizadas para tu familia.</span>
+        <span>{{ isInstitutionView ? 'Solo puedes consultar los perfiles registrados por tu institución.' : 'La información se limita a propuestas autorizadas para tu familia.' }}</span>
       </footer>
     </main>
   </div>

@@ -64,27 +64,50 @@
           </button>
         </div>
 
-        @if (upcomingFamilyAppointments.length) {
-          <button class="card next-appointment" type="button" (click)="openQuickLink('citas')">
-            <span class="next-appointment-copy"><strong>Próxima cita</strong><span>{{ appointmentDate(upcomingFamilyAppointments[0].appointment_date) }} · {{ upcomingFamilyAppointments[0].appointment_time }}</span></span>
-            <span class="chevron" aria-hidden="true">›</span>
-          </button>
-        } @else if (familyOutcome?.status === 'aceptada') {
+        @if (childInterestCasesLoaded && selectedChildCase; as childCase) {
+          <article class="card next-appointment appointment-location-card outcome-accepted">
+            <button class="next-appointment-main" type="button" (click)="openQuickLink('citas')">
+              <span class="next-appointment-copy">
+                <strong>{{ childCaseHomeTitle(childCase) }}</strong>
+                <span>{{ childCaseHomeDescription(childCase) }}</span>
+                @if (childCaseHasUpcomingAppointment(childCase) && childCase.appointment_date) {
+                  <span>{{ appointmentDate(childCase.appointment_date) }} · {{ childCase.appointment_time?.slice(0, 5) }}</span>
+                }
+              </span>
+              <span class="chevron" aria-hidden="true">›</span>
+            </button>
+            @if (childCaseHasUpcomingAppointment(childCase) && childCase.appointment_location) {
+              <span class="appointment-address">{{ childCase.appointment_location }}</span>
+              <a class="appointment-directions" [href]="googleMapsDirections(childCase.appointment_location)" target="_blank" rel="noopener noreferrer">Llévame</a>
+            }
+          </article>
+        } @else if (childInterestCasesLoaded && upcomingFamilyAppointments.length) {
+          <article class="card next-appointment appointment-location-card">
+            <button class="next-appointment-main" type="button" (click)="openQuickLink('citas')">
+              <span class="next-appointment-copy"><strong>Próxima cita</strong><span>{{ appointmentDate(upcomingFamilyAppointments[0].appointment_date) }} · {{ appointmentTime(upcomingFamilyAppointments[0].appointment_time) }}</span></span>
+              <span class="chevron" aria-hidden="true">›</span>
+            </button>
+            @if (upcomingFamilyAppointments[0].appointment_location) {
+              <span class="appointment-address">{{ upcomingFamilyAppointments[0].appointment_location }}</span>
+              <a class="appointment-directions" [href]="googleMapsDirections(upcomingFamilyAppointments[0].appointment_location)" target="_blank" rel="noopener noreferrer">Llévame</a>
+            }
+          </article>
+        } @else if (childInterestCasesLoaded && familyOutcome?.status === 'aceptada') {
           <button class="card next-appointment outcome-accepted" type="button" (click)="openCatalog()">
             <span class="next-appointment-copy"><strong>¡Tu evaluación fue aceptada!</strong><span>Ya puedes acceder al catálogo de perfiles.</span></span>
             <span class="chevron" aria-hidden="true">›</span>
           </button>
-        } @else if (familyOutcome?.status === 'rechazada') {
+        } @else if (childInterestCasesLoaded && familyOutcome?.status === 'rechazada') {
           <button class="card next-appointment outcome-rejected" type="button" (click)="showSection('proceso')">
             <span class="next-appointment-copy"><strong>Evaluación pendiente de una nueva cita</strong><span>{{ familyOutcome.reason || 'La institución solicita otra evaluación.' }}</span></span>
             <span class="chevron" aria-hidden="true">›</span>
           </button>
-        } @else if (familyOutcome?.status === 'pendiente') {
+        } @else if (childInterestCasesLoaded && familyOutcome?.status === 'pendiente') {
           <button class="card next-appointment outcome-pending" type="button" (click)="showSection('proceso')">
             <span class="next-appointment-copy"><strong>Informe en revisión</strong><span>La institución está revisando el informe psicológico.</span></span>
             <span class="chevron" aria-hidden="true">›</span>
           </button>
-        } @else if (completedFamilyAppointments.length) {
+        } @else if (childInterestCasesLoaded && completedFamilyAppointments.length) {
           <button class="card next-appointment outcome-pending" type="button" (click)="showSection('proceso')">
             <span class="next-appointment-copy"><strong>Asistencia confirmada</strong><span>El informe de tu cita está en preparación.</span></span>
             <span class="chevron" aria-hidden="true">›</span>
@@ -117,6 +140,43 @@
             </article>
           }
         </div>
+        @if (selectedChildCase; as childCase) {
+          <section class="child-process-panel" aria-labelledby="child-process-title">
+            <header class="child-process-heading">
+              <div>
+                <span class="eyebrow">PROCESO DE VINCULACIÓN</span>
+                <h2 id="child-process-title">Seguimiento de {{ childCase.child_name }}</h2>
+                @if (childCase.child_age) { <p>{{ childCase.child_age }} años · Elegido el {{ formatDocumentDate(childCase.created_at) }}</p> }
+              </div>
+              <span class="child-process-status">En seguimiento</span>
+            </header>
+            <div class="child-process-timeline" aria-label="Etapas del proceso del niño">
+              @for (step of childProcessSteps; track step.name) {
+                <div class="child-process-step" [class.step-complete]="step.state === 'complete'" [class.step-current]="step.state === 'current'">
+                  <span class="child-process-step-mark" aria-hidden="true"><ion-icon [name]="step.state === 'complete' ? 'checkmark-circle-outline' : step.state === 'current' ? 'time-outline' : 'ellipse-outline'"></ion-icon></span>
+                  <span>{{ step.name }}</span>
+                </div>
+              }
+            </div>
+            <article class="child-process-next">
+              <ion-icon name="information-circle-outline" aria-hidden="true"></ion-icon>
+              <div><strong>{{ childCaseHomeTitle(childCase) }}</strong><p>{{ childProcessNextStep }}</p></div>
+            </article>
+            @if (childCaseHasUpcomingAppointment(childCase)) {
+              <article class="child-process-appointment">
+                <div><span class="eyebrow">{{ childCase.appointment_type === 'visita_inicial' ? 'VISITA INICIAL' : childCase.appointment_type === 'visita_hogar' ? 'VISITA AL HOGAR' : 'CITA DE ENTREGA' }}</span><strong>{{ appointmentDate(childCase.appointment_date!) }} · {{ appointmentTime(childCase.appointment_time!) }}</strong></div>
+                @if (childCase.appointment_location) {
+                  <p>{{ childCase.appointment_location }}</p>
+                  <a class="maps-link" [href]="googleMapsDirections(childCase.appointment_location)" target="_blank" rel="noopener noreferrer"><ion-icon name="navigate-outline" aria-hidden="true"></ion-icon> Cómo llegar</a>
+                }
+              </article>
+            }
+            @if (childCase.status === 'visita_hogar_disponible' && !homeAddress.trim()) {
+              <button class="process-action" type="button" (click)="showSection('hogar')">Registrar dirección del hogar</button>
+            }
+            <button class="process-secondary-action" type="button" (click)="showSection('notificaciones')">Ver avisos del proceso</button>
+          </section>
+        }
         @if (familyOutcome?.status === 'aceptada') {
           <article class="process-reminder"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon><p>La institución aceptó tu evaluación psicológica. En Inicio tienes el acceso directo al catálogo.</p></article>
         } @else if (familyOutcome?.status === 'rechazada') {
@@ -188,7 +248,7 @@
           <button class="back-button" type="button" aria-label="Volver a inicio" (click)="showSection('inicio')">‹</button>
           <h1 id="appointments-title">Mis citas</h1>
         </header>
-        <p class="section-note">Aquí verás las citas que agende el psicólogo para tu familia.</p>
+        <p class="section-note">Aquí verás las citas que agenden la institución y el psicólogo para tu familia.</p>
         <div class="segmented-tabs" role="tablist" aria-label="Secciones de citas">
           <button type="button" role="tab" [attr.aria-selected]="appointmentTab === 'proximas'" [class.tab-selected]="appointmentTab === 'proximas'" (click)="appointmentTab = 'proximas'">Próximas</button>
           <button type="button" role="tab" [attr.aria-selected]="appointmentTab === 'historial'" [class.tab-selected]="appointmentTab === 'historial'" (click)="appointmentTab = 'historial'">Historial</button>
@@ -201,7 +261,8 @@
                 <span class="appointment-icon" aria-hidden="true"><ion-icon name="calendar-outline"></ion-icon></span>
                 <div class="appointment-detail-copy">
                   <h2>{{ appointment.title }}</h2>
-                  <p>{{ appointmentDate(appointment.appointment_date) }} · {{ appointment.appointment_time }}</p>
+                  <p>{{ appointmentDate(appointment.appointment_date) }} · {{ appointmentTime(appointment.appointment_time) }}</p>
+                  @if (appointment.appointment_location) { <p class="appointment-address">{{ appointment.appointment_location }}</p><a class="appointment-directions" [href]="googleMapsDirections(appointment.appointment_location)" target="_blank" rel="noopener noreferrer">Llévame</a> }
                   @if (appointment.note) { <p>{{ appointment.note }}</p> }
                 </div>
               </article>
@@ -210,7 +271,7 @@
         } @else {
           <div class="appointment-list">
             @for (appointment of completedFamilyAppointments; track appointment.id) {
-              <article class="card appointment-detail"><span class="appointment-icon"><ion-icon name="checkmark-circle-outline"></ion-icon></span><div class="appointment-detail-copy"><h2>{{ appointment.title }} · Asistencia confirmada</h2><p>{{ appointmentDate(appointment.appointment_date) }} · {{ appointment.appointment_time }}</p>@if (appointment.note) { <p>{{ appointment.note }}</p> }</div></article>
+              <article class="card appointment-detail"><span class="appointment-icon"><ion-icon name="checkmark-circle-outline"></ion-icon></span><div class="appointment-detail-copy"><h2>{{ appointment.title }} · Asistencia confirmada</h2><p>{{ appointmentDate(appointment.appointment_date) }} · {{ appointmentTime(appointment.appointment_time) }}</p>@if (appointment.appointment_location) { <p class="appointment-address">{{ appointment.appointment_location }}</p><a class="appointment-directions" [href]="googleMapsDirections(appointment.appointment_location)" target="_blank" rel="noopener noreferrer">Llévame</a> }@if (appointment.note) { <p>{{ appointment.note }}</p> }</div></article>
             } @empty { <div class="card empty-panel"><strong>No hay citas anteriores</strong><p>Las citas completadas aparecerán aquí.</p></div> }
           </div>
         }
@@ -295,6 +356,7 @@
         <div class="more-intro"><strong>Tu cuenta y preferencias</strong><span>Gestiona tu información y consulta los recursos de PATHOME.</span></div>
         <div class="profile-options">
           <button class="profile-option" type="button" (click)="showSection('perfil')"><span class="option-icon profile-tone" aria-hidden="true"><ion-icon name="person-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Mi perfil</span><small>Consulta los datos de tu familia</small></span><span class="chevron">›</span></button>
+          <button class="profile-option" type="button" (click)="showSection('hogar')"><span class="option-icon profile-tone" aria-hidden="true"><ion-icon name="home-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Datos del hogar</span><small>Guarda la dirección para coordinar visitas</small></span><span class="chevron">›</span></button>
           <button class="profile-option" type="button" (click)="showSection('seguridad')"><span class="option-icon security-tone" aria-hidden="true"><ion-icon name="lock-closed-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Seguridad y privacidad</span><small>Protección de tu información personal</small></span><span class="chevron">›</span></button>
           <button class="profile-option" type="button" (click)="showSection('preferencias')"><span class="option-icon notifications-tone" aria-hidden="true"><ion-icon name="notifications-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Preferencias de notificaciones</span><small>Elige qué avisos quieres recibir</small></span><span class="chevron">›</span></button>
           <button class="profile-option" type="button" (click)="showSection('ayuda')"><span class="option-icon help-tone" aria-hidden="true"><ion-icon name="help-circle-outline"></ion-icon></span><span class="option-copy"><span class="option-label">Ayuda y soporte</span><small>Encuentra respuestas y orientación</small></span><span class="chevron">›</span></button>
@@ -363,7 +425,7 @@
           <div class="assistant-chat" aria-live="polite" aria-label="Conversación con el asistente">
             <article class="assistant-message assistant-welcome">
               <div class="assistant-message-label"><ion-icon name="chatbubble-ellipses-outline" aria-hidden="true"></ion-icon><span>PATHHOME IA</span></div>
-              <div class="assistant-text"><p>¡Hola, {{ firstName }}! Soy la IA de PathHome. Puedo ayudarte con tus documentos, citas, evaluación psicológica y el resultado de aptitud. ¿Qué te gustaría saber?</p></div>
+              <div class="assistant-text"><p>¡Hola, {{ firstName }}! Soy la IA de PathHome. Puedo orientarte sobre tus documentos, evaluación, acceso al catálogo, elección de un niño, citas, dirección del hogar y el seguimiento de tu proceso.</p></div>
             </article>
             @for (message of assistantMessages; track $index) {
               <article class="assistant-message" [class.from-user]="message.role === 'user'">
@@ -384,13 +446,15 @@
           <span class="assistant-avatar" aria-hidden="true"><ion-icon [name]="activeSection === 'asistente' ? 'chatbubble-ellipses-outline' : 'help-circle-outline'"></ion-icon></span>
           <div class="conversation-copy">
             <strong>{{ activeSection === 'asistente' ? '¿Qué me falta para completar mi proceso?' : 'Tu espacio de mensajes' }}</strong>
-            <p>{{ activeSection === 'asistente' ? 'También puedes preguntar si la institución aceptó tu evaluación y si ya tienes acceso al catálogo.' : 'Aquí podrás revisar la comunicación de tu proceso.' }}</p>
+            <p>{{ activeSection === 'asistente' ? 'También puedes preguntar qué sigue después de elegir a un niño, cómo registrar tu dirección y dónde consultar tus citas y avisos.' : 'Aquí podrás revisar la comunicación de tu proceso.' }}</p>
           </div>
         </article>
         @if (activeSection === 'asistente') {
           <div class="reply-chips" aria-label="Temas de ayuda">
             <button type="button" (click)="askAssistant('¿Qué documentos necesito enviar?')">Documentos necesarios</button>
             <button type="button" (click)="askAssistant('¿Qué etapa sigue en mi proceso?')">Etapas del proceso</button>
+            <button type="button" (click)="askAssistant('Ya elegí a un niño, ¿qué sigue ahora?')">Después de elegir</button>
+            <button type="button" (click)="askAssistant('¿Dónde registro la dirección de mi hogar y cómo veo la cita?')">Dirección y citas</button>
           </div>
           <form class="conversation-input" (ngSubmit)="askAssistant()">
             <input name="assistantDraft" [(ngModel)]="assistantDraft" maxlength="1000" placeholder="Escribe tu pregunta…" aria-label="Escribe tu pregunta" [disabled]="assistantBusy" />
@@ -405,8 +469,13 @@
     @if (activeSection === 'hogar') {
       <section class="view detail-view" aria-labelledby="household-title">
         <header class="view-heading"><button class="back-button" type="button" aria-label="Volver a más opciones" (click)="showSection('mas')">‹</button><h1 id="household-title">Datos del hogar</h1></header>
-        <p class="section-note">Información del entorno familiar</p>
-        <article class="card empty-panel"><span class="appointment-icon"><ion-icon name="home-outline"></ion-icon></span><strong>Información del hogar</strong><p>Los datos del hogar aparecerán aquí cuando estén disponibles en tu cuenta.</p></article>
+        <p class="section-note">Registra la dirección donde vive la familia para que el psicólogo pueda coordinar la visita al hogar.</p>
+        <form class="card household-address-form" (ngSubmit)="saveHomeAddress()">
+          <label class="household-address-field"><span>Dirección del hogar</span><textarea name="familyHomeAddress" rows="4" maxlength="500" autocomplete="street-address" placeholder="Calle, número de casa, sector, municipio y provincia" required [(ngModel)]="homeAddressDraft"></textarea></label>
+          <p>Incluye referencias que ayuden a encontrar la vivienda. Esta dirección se compartirá con el psicólogo asignado para coordinar la visita al hogar.</p>
+          @if (homeAddressFeedback) { <p class="household-address-feedback" role="status">{{ homeAddressFeedback }}</p> }
+          <button class="profile-save-button" type="submit" [disabled]="homeAddressSaving || !homeAddressDraft.trim()">{{ homeAddressSaving ? 'Guardando…' : 'Guardar dirección' }}</button>
+        </form>
       </section>
     }
 

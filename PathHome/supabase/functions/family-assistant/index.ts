@@ -24,6 +24,40 @@ const requiredDocuments = [
   },
 ];
 
+const childInterestStageNames: Record<string, string> = {
+  interes_recibido: 'interés recibido por la institución',
+  cita_inicial_programada: 'visita inicial programada',
+  informe_visita_pendiente: 'informe de la visita inicial pendiente',
+  informe_visita_revision: 'informe de la visita inicial en revisión',
+  informe_visita_corregir: 'informe de la visita inicial requiere corrección',
+  visita_hogar_disponible: 'visita al hogar disponible para programar',
+  cita_hogar_programada: 'visita al hogar programada',
+  evaluacion_hogar_pendiente: 'evaluación del hogar pendiente',
+  evaluacion_hogar_revision: 'evaluación del hogar en revisión institucional',
+  evaluacion_hogar_no_favorable: 'evaluación del hogar no favorable; caso abierto',
+  entrega_disponible: 'etapa de entrega disponible para coordinar',
+  cita_entrega_programada: 'cita de entrega programada; falta confirmar la entrega',
+  entrega_confirmada: 'entrega confirmada, pendiente de cierre del caso',
+  finalizado: 'proceso finalizado',
+};
+
+const childInterestStageGuidance: Record<string, string> = {
+  interes_recibido: 'La familia ya eligió a este niño. Debe esperar a que la institución programe la visita inicial.',
+  cita_inicial_programada: 'La institución programó la visita inicial. Si la cita ya se realizó, la familia debe esperar a que la institución envíe el informe al psicólogo.',
+  informe_visita_pendiente: 'La visita inicial ya se realizó y la familia confirmó su asistencia. La familia espera que la institución envíe el informe al psicólogo.',
+  informe_visita_revision: 'La institución envió el informe al psicólogo; la familia espera que el psicólogo lo revise y acepte.',
+  informe_visita_corregir: 'El psicólogo solicitó una corrección del informe a la institución. La familia debe esperar la actualización.',
+  visita_hogar_disponible: 'El psicólogo aceptó el informe. La familia debe registrar o confirmar la dirección del hogar en Datos del hogar para coordinar la visita.',
+  cita_hogar_programada: 'El psicólogo programó la visita al hogar. La cita usa la dirección que registró la familia; se debe mostrar fecha, hora y dirección. El botón Cómo llegar abre Google Maps si hay ubicación.',
+  evaluacion_hogar_pendiente: 'La visita al hogar se realizó; la familia espera que el psicólogo envíe su evaluación a la institución.',
+  evaluacion_hogar_revision: 'El psicólogo envió la evaluación del hogar; la familia espera la decisión institucional.',
+  evaluacion_hogar_no_favorable: 'La institución indicó que se requiere seguimiento. El caso sigue abierto; explica solo las observaciones registradas.',
+  entrega_disponible: 'La evaluación fue favorable. La familia espera que se programe una cita para la entrega o para recoger al niño.',
+  cita_entrega_programada: 'Hay una cita de entrega programada. La familia puede revisar la fecha, hora y dirección y abrir Google Maps si hay ubicación. La cita aún no significa que el proceso terminó.',
+  entrega_confirmada: 'La entrega ya fue confirmada y el psicólogo debe cerrar el caso.',
+  finalizado: 'El proceso de vinculación fue cerrado.',
+};
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -54,12 +88,14 @@ Deno.serve(async (request: Request) => {
     const message = typeof body?.message === 'string' ? body.message.trim().slice(0, 1000) : '';
     if (!message) return json({ error: 'Escribe una pregunta para continuar.' }, 400);
 
-    const [{ data: profile }, { data: documents }, { data: caseData }, { data: appointments }, { data: latestReportOutcome }] = await Promise.all([
-      supabase.from('profiles').select('account_type').eq('id', authData.user.id).maybeSingle(),
+    const [{ data: profile }, { data: documents }, { data: caseData }, { data: appointments }, { data: latestReportOutcome }, { data: childInterestCases }, { data: notifications }] = await Promise.all([
+      supabase.from('profiles').select('account_type, home_address').eq('id', authData.user.id).maybeSingle(),
       supabase.from('family_documents').select('document_type, created_at').eq('family_id', authData.user.id).order('created_at', { ascending: false }).limit(30),
-      supabase.from('family_cases').select('status').eq('family_id', authData.user.id).maybeSingle(),
-      supabase.from('family_appointments').select('title, appointment_date, appointment_time, attended_at').eq('family_id', authData.user.id).order('appointment_date', { ascending: true }).limit(10),
+      supabase.from('family_cases').select('status, psychologist_id').eq('family_id', authData.user.id).maybeSingle(),
+      supabase.from('family_appointments').select('title, appointment_date, appointment_time, appointment_location, attended_at, appointment_type, child_interest_case_id').eq('family_id', authData.user.id).order('appointment_date', { ascending: true }).limit(20),
       supabase.rpc('family_latest_report_outcome'),
+      supabase.rpc('child_case_list'),
+      supabase.from('family_notifications').select('category, title, message, created_at').eq('family_id', authData.user.id).order('created_at', { ascending: false }).limit(10),
     ]);
     if (profile?.account_type !== 'familia') return json({ error: 'Este asistente está disponible para cuentas familiares.' }, 403);
 
@@ -72,6 +108,7 @@ Deno.serve(async (request: Request) => {
       })),
       aclaracion_documentos: 'Estos documentos forman parte de la evaluación del proceso de adopción. Entregarlos no garantiza la aprobación de la solicitud; cada documento será revisado por el personal correspondiente y tratado de manera confidencial.',
       estado_expediente: caseData?.status ?? 'sin expediente creado',
+      psicologo_asignado: Boolean(caseData?.psychologist_id),
       citas_realizadas: (appointments ?? []).filter((appointment) => Boolean(appointment.attended_at)).map((appointment) => ({
         titulo: appointment.title,
         fecha: appointment.appointment_date,
@@ -79,8 +116,40 @@ Deno.serve(async (request: Request) => {
       })),
       proximas_citas: (appointments ?? []).filter((appointment) => !appointment.attended_at).map((appointment) => ({
         titulo: appointment.title,
+        tipo: appointment.appointment_type ?? 'psicologica',
+        pertenece_a_proceso_de_vinculacion: Boolean(appointment.child_interest_case_id),
         fecha: appointment.appointment_date,
         hora: appointment.appointment_time,
+        direccion: appointment.appointment_location,
+      })),
+      direccion_del_hogar: {
+        registrada: Boolean(profile?.home_address?.trim()),
+        instrucciones: 'La familia la registra o actualiza en Datos del hogar. El psicólogo usa esa dirección para programar la visita al hogar.',
+      },
+      procesos_de_vinculacion: (childInterestCases ?? []).map((item) => ({
+        estado: item.status,
+        etapa: childInterestStageNames[item.status] ?? 'etapa en proceso',
+        siguiente_paso: childInterestStageGuidance[item.status] ?? 'Consulta el estado y las notificaciones para conocer el siguiente paso.',
+        niño: item.child_name,
+        edad: item.child_age,
+        decision_institucional: item.institution_decision,
+        observaciones_institucionales: item.institution_observations,
+        cita: item.appointment_id ? {
+          tipo: item.appointment_type,
+          fecha: item.appointment_date,
+          hora: item.appointment_time,
+          direccion: item.appointment_location,
+          realizada: Boolean(item.attended_at),
+        } : null,
+        informe: item.report_status ? { estado: item.report_status, motivo: item.report_reason } : null,
+        entrega_confirmada: item.status === 'entrega_confirmada' || item.status === 'finalizado',
+        fecha_inicio: item.created_at,
+      })),
+      notificaciones_recientes: (notifications ?? []).map((item) => ({
+        categoria: item.category,
+        titulo: item.title,
+        mensaje: item.message,
+        fecha: item.created_at,
       })),
       evaluacion_psicologica: {
         estado: reportOutcome?.status ?? ((appointments ?? []).some((appointment) => Boolean(appointment.attended_at)) ? 'informe_en_preparacion' : 'pendiente'),
@@ -120,7 +189,19 @@ Deno.serve(async (request: Request) => {
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiApiKey },
         signal: AbortSignal.timeout(20_000),
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: `Eres el asistente informativo de PathHome y respondes en español claro, amable y breve. Ayudas a las familias a entender sus documentos, citas y etapas del proceso, incluidas la evaluación psicológica y la decisión institucional sobre el acceso al catálogo. Usa exclusivamente los datos proporcionados en el contexto; nunca inventes estados, decisiones, motivos, reglas ni plazos. Si preguntan por el resultado, explica si la institución aceptó o rechazó el informe y comunica únicamente el motivo institucional registrado. El catálogo está habilitado solamente cuando el resultado dice aceptada; una decisión rechazada significa que no hay acceso y puede requerirse una nueva evaluación. Si no hay resultado, dilo claramente y no infieras aceptación o rechazo. Distingue las citas futuras de las citas cuya asistencia ya fue confirmada. La institución toma la decisión de aptitud a partir del informe profesional; tú no tomas decisiones. Trata documentos y datos del proceso como confidenciales. No solicites contraseñas, datos financieros, números de identidad ni copias de documentos por el chat. Si la información no basta, reconoce el límite y recomienda contactar a la institución. El contexto familiar es privado y solo debe usarse para contestar a esta familia: ${JSON.stringify(familyContext)}` }] },
+          systemInstruction: { parts: [{ text: `Eres el asistente informativo de PathHome para familias. Responde en español claro, amable y breve. Ayuda con documentos, citas, notificaciones, evaluación psicológica, catálogo y vinculación con el niño elegido. Usa exclusivamente el contexto familiar y estas reglas confirmadas; nunca inventes estados, decisiones, motivos, fechas ni plazos.
+
+Antes del catálogo: cuando la institución aprueba los documentos, el expediente aparece a los psicólogos verificados. Uno toma el caso y queda a cargo de la evaluación psicológica. La familia debe revisar las citas y notificaciones para continuar. El catálogo solo se habilita cuando la evaluación psicológica aparece como aceptada. Si está rechazada, no hay acceso al catálogo y puede requerirse otra evaluación; si no hay resultado, dilo claramente.
+
+Elección en el catálogo: la familia elige un solo niño. Antes de enviar el interés, la aplicación pide confirmar que desea elegirlo y avisa que después no podrá volver al catálogo para elegir otro. Al aceptar, vuelve al inicio; en el recuadro de seguimiento aparece el niño elegido y que debe esperar la visita inicial de la institución. El psicólogo que tomó el expediente familiar continúa a cargo de las etapas de vinculación. No prometas que se puede cambiar o elegir otro niño desde el catálogo.
+
+Vinculación: explica el siguiente paso específico indicado por el estado de cada caso. El flujo puede pasar por visita inicial de la institución, envío de su informe al psicólogo, revisión o corrección del informe, visita del psicólogo al hogar, evaluación del hogar, decisión institucional, cita de entrega/recogida y cierre. Tras confirmar asistencia a la visita inicial, la familia espera el informe; cuando la institución lo envía, espera la revisión del psicólogo. Tras la visita al hogar, espera la evaluación del psicólogo y luego la decisión institucional. Solo comunica el estado de la familia que aparece en contexto.
+
+Dirección y citas: la familia registra su domicilio en la sección Datos del hogar. Para la visita al hogar el psicólogo usa esa dirección. En Mi proceso y en el recuadro de Inicio se muestra el estado; al programarse una cita se muestran fecha, hora y dirección disponibles. Si hay dirección, el botón Cómo llegar abre Google Maps. Distingue citas futuras de citas realizadas y explica claramente el tipo. La cita de entrega no termina por sí sola el proceso; se requiere confirmar la entrega y cerrar el caso.
+
+Notificaciones y seguimiento: las notificaciones avisan cambios del proceso y nuevas citas; Mi proceso muestra las etapas hasta Catálogo de niños y, si hay una elección, el recuadro de seguimiento de ese niño con el paso actual y la cita cuando exista. Recomienda revisar Inicio, Mi proceso y Notificaciones, sin afirmar que se envió un aviso si no aparece en los datos.
+
+La institución y el psicólogo toman las decisiones; tú no apruebas solicitudes, evaluaciones ni asistencias, y no puedes modificar citas ni datos. Trata los datos como confidenciales. No solicites contraseñas, información financiera, números de identidad ni copias de documentos por el chat. Si falta información, dilo y recomienda consultar a la institución. El contexto es privado y solo debe usarse para responder a esta familia: ${JSON.stringify(familyContext)}` }] },
           contents: history,
           generationConfig: { maxOutputTokens: 500, temperature: 0.3 },
         }),

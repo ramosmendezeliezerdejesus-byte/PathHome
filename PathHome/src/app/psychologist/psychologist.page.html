@@ -17,6 +17,7 @@
           @switch (section.id) {
             @case ('inicio') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10h-6v-7H9v7H3z"/></svg> }
             @case ('expedientes') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 2h9v12H3z"/><path d="M3 6V4h7l2 2"/></svg> }
+            @case ('casos') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M20 8v6M23 11h-6"/></svg> }
             @case ('evaluaciones') { <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 10h8M8 14h8M8 18h5"/></svg> }
             @case ('citas') { <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg> }
             @case ('informes') { <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v6h5M9 13h7M9 17h7"/></svg> }
@@ -40,7 +41,7 @@
             <span class="brain-avatar" aria-hidden="true"><svg class="ph-icon" viewBox="0 0 24 24"><use href="#psych-icon-brain"></use></svg></span>
             <div><h1 id="home-title">Panel de psicología</h1><p>Hola, {{ profile.name }}</p></div>
           </header>
-          <div class="home-metrics"><article class="metric-card assigned"><div><small>FAMILIAS APROBADAS</small><strong>{{ approvedFamilies.length }}</strong></div></article></div>          <div class="home-workspace">
+          <div class="home-metrics"><article class="metric-card assigned"><div><small>EXPEDIENTES A TU CARGO</small><strong>{{ assignedFamilies.length }}</strong></div></article></div>          <div class="home-workspace">
             <section class="home-panel quick-actions" aria-labelledby="quick-actions-title">
               <div class="section-heading-row"><div><h2 id="quick-actions-title">Acciones rápidas</h2><p>Tareas frecuentes y accesos directos</p></div><span class="quick-bolt" aria-hidden="true"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#psych-icon-bolt"></use></svg></span></div>
               <button type="button" class="quick-action lilac-action" (click)="showSection('evaluaciones')"><span aria-hidden="true"><svg class="ph-icon" viewBox="0 0 24 24"><use href="#psych-icon-brain"></use></svg></span><span><strong>Registrar evaluación</strong><small>Añadir observaciones</small></span><b aria-hidden="true">›</b></button>
@@ -49,8 +50,8 @@
               <button type="button" class="quick-action gold-action" (click)="showSection('informes')"><span aria-hidden="true"><svg class="ph-icon" viewBox="0 0 24 24"><use href="#psych-icon-document"></use></svg></span><span><strong>Elaborar informe</strong><small>Conclusiones y recomendaciones</small></span><b aria-hidden="true">›</b></button>
             </section>
             <section class="home-panel home-case-table" aria-labelledby="home-cases-title">
-              <div class="section-heading-row"><div><h2 id="home-cases-title">Familias aprobadas</h2><p>Expedientes disponibles para atención</p></div><button class="text-button" type="button" (click)="showSection('expedientes')">Ver todos ›</button></div>
-              @for (family of approvedFamilies; track family.family_id) { <article class="calendar-appointment"><div><strong>{{ family.full_name }}</strong><p>{{ family.documents.length }} documentos enviados</p></div></article> } @empty { <p class="empty-state">No hay familias aprobadas.</p> }
+              <div class="section-heading-row"><div><h2 id="home-cases-title">Expedientes familiares</h2><p>Casos aprobados para tomar o atender</p></div><button class="text-button" type="button" (click)="showSection('expedientes')">Ver todos ›</button></div>
+              @for (family of activeOrAvailableFamilies; track family.family_id) { <article class="calendar-appointment"><div><strong>{{ family.full_name }}</strong><p>{{ family.assigned_to_me ? family.documents.length + ' documentos · A tu cargo' : 'Disponible para tomar' }}</p></div></article> } @empty { <p class="empty-state">No hay expedientes familiares aprobados disponibles.</p> }
             </section>
           </div>
 
@@ -59,15 +60,18 @@
 
       @if (activeSection === 'expedientes') {
         <section class="screen cases-screen" aria-labelledby="cases-page-title">
-          <header class="screen-heading"><span class="heading-icon" aria-hidden="true"><svg class="ph-icon" viewBox="0 0 24 24"><use href="#psych-icon-folder"></use></svg></span><div><h1 id="cases-page-title">Expedientes</h1><p>Familias aprobadas por el administrador</p></div></header>
+          <header class="screen-heading"><span class="heading-icon" aria-hidden="true"><svg class="ph-icon" viewBox="0 0 24 24"><use href="#psych-icon-folder"></use></svg></span><div><h1 id="cases-page-title">Expedientes</h1><p>Casos aprobados disponibles para tomar y expedientes a tu cargo</p></div></header>
+          @if (familyAssignmentFeedback) { <p class="feedback" role="status">{{ familyAssignmentFeedback }}</p> }
+          @if (familyAssignmentError) { <p class="feedback" role="alert">{{ familyAssignmentError }}</p> }
+          @if (psychologistHasActiveInterestCase) { <p class="feedback">{{ activePsychologistCaseSummary }} Podrás tomar otro cuando finalice el proceso actual.</p> }
           @if (!selectedPsychologistFamily) {
             @if (approvedFamilies.length) {
               <section class="psych-family-grid" aria-label="Familias aprobadas">
                 @for (family of approvedFamilies; track family.family_id) {
                   <button class="psych-family-card" type="button" (click)="openApprovedFamily(family)">
-                    <span class="psych-family-card-top"><span class="psych-family-kicker"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#psych-icon-folder"></use></svg>EXPEDIENTE FAMILIAR</span><span class="psych-family-status">Aprobada</span></span>
+                    <span class="psych-family-card-top"><span class="psych-family-kicker"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#psych-icon-folder"></use></svg>EXPEDIENTE FAMILIAR</span><span class="psych-family-status">{{ family.status === 'finalizado' ? 'Caso terminado' : family.assigned_to_me ? 'Aprobada · a tu cargo' : 'Aprobada · disponible' }}</span></span>
                     <strong class="psych-family-name">{{ family.full_name }}</strong><span class="psych-family-email">{{ family.email }}</span>
-                    <span class="psych-family-card-footer"><span>{{ family.documents.length }} {{ family.documents.length === 1 ? 'documento enviado' : 'documentos enviados' }}</span><span class="psych-family-open">Abrir expediente <b>›</b></span></span>
+                    <span class="psych-family-card-footer"><span>{{ family.status === 'finalizado' ? 'Entrega confirmada · proceso cerrado' : family.assigned_to_me ? family.documents.length + ' documentos disponibles' : 'Caso nuevo · documentos protegidos' }}</span><span class="psych-family-open">{{ family.status === 'finalizado' ? 'Ver estado' : family.assigned_to_me ? 'Abrir expediente' : 'Revisar para tomar' }} <b>›</b></span></span>
                   </button>
                 }
               </section>
@@ -75,16 +79,64 @@
           } @else {
             <button class="psych-family-back" type="button" (click)="closeApprovedFamily()">‹ Volver a expedientes</button>
             <section class="psych-family-detail">
-              <header class="psych-family-detail-heading"><div><span class="psych-family-kicker">EXPEDIENTE FAMILIAR</span><h2>{{ selectedPsychologistFamily.full_name }}</h2><p>{{ selectedPsychologistFamily.email }}</p></div><span class="psych-family-status">Aprobada</span></header>
-              <div class="psych-family-documents-heading"><div><h3>Documentos enviados</h3><p>{{ selectedPsychologistFamily.documents.length }} {{ selectedPsychologistFamily.documents.length === 1 ? 'archivo' : 'archivos' }} en este expediente</p></div></div>
-              <div class="psych-family-document-list">
-                @for (doc of selectedPsychologistFamily.documents; track doc.id) {
-                  <article class="psych-family-document-row"><span class="psych-family-document-icon"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#psych-icon-document"></use></svg></span><span class="psych-family-document-copy"><strong>{{ doc.document_type }}</strong><small>{{ doc.name }} · {{ familyDocumentDate(doc.created_at) }}</small></span><button class="psych-family-open-document" type="button" (click)="openFamilyDocument(doc.storage_path)">Abrir archivo <b>›</b></button></article>
-                } @empty { <p class="psych-family-no-documents">Esta familia aún no ha enviado documentos.</p> }
-              </div>
-              <footer class="psych-family-detail-actions"><button class="outline-button" type="button" (click)="scheduleFamilyFromRecord(selectedPsychologistFamily)"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#psych-icon-calendar"></use></svg>Agendar cita</button></footer>
+              <header class="psych-family-detail-heading"><div><span class="psych-family-kicker">EXPEDIENTE FAMILIAR</span><h2>{{ selectedPsychologistFamily.full_name }}</h2><p>{{ selectedPsychologistFamily.email }}</p></div><span class="psych-family-status">{{ selectedPsychologistFamily.status === 'finalizado' ? 'Caso terminado' : selectedPsychologistFamily.assigned_to_me ? 'Aprobada · a tu cargo' : 'Aprobada · disponible' }}</span></header>
+              @if (selectedPsychologistFamily.status === 'finalizado') {
+                <div class="workflow-empty"><p>Este caso terminó y ya no cuenta como expediente activo. La entrega fue confirmada y el proceso de vinculación se cerró.</p></div>
+              } @else if (!selectedPsychologistFamily.assigned_to_me) {
+                <div class="workflow-empty"><p>La institución aprobó este expediente y está disponible para que un psicólogo lo tome. Al tomarlo, quedarás como responsable de la evaluación y de las etapas posteriores de vinculación.</p><button class="primary-button" type="button" [disabled]="psychologistHasActiveInterestCase || workflowBusyCaseId === selectedPsychologistFamily.family_id" (click)="claimApprovedFamilyCase(selectedPsychologistFamily)">{{ workflowBusyCaseId === selectedPsychologistFamily.family_id ? 'Tomando expediente…' : psychologistHasActiveInterestCase ? 'Finaliza tu expediente activo primero' : 'Tomar expediente' }}</button></div>
+              } @else {
+                <div class="psych-family-documents-heading"><div><h3>Documentos enviados</h3><p>{{ selectedPsychologistFamily.documents.length }} {{ selectedPsychologistFamily.documents.length === 1 ? 'archivo' : 'archivos' }} en este expediente</p></div></div>
+                <div class="psych-family-document-list">
+                  @for (doc of selectedPsychologistFamily.documents; track doc.id) {
+                    <article class="psych-family-document-row"><span class="psych-family-document-icon"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#psych-icon-document"></use></svg></span><span class="psych-family-document-copy"><strong>{{ doc.document_type }}</strong><small>{{ doc.name }} · {{ familyDocumentDate(doc.created_at) }}</small></span><button class="psych-family-open-document" type="button" (click)="openFamilyDocument(doc.storage_path)">Abrir archivo <b>›</b></button></article>
+                  } @empty { <p class="psych-family-no-documents">Esta familia aún no ha enviado documentos.</p> }
+                </div>
+                <footer class="psych-family-detail-actions"><button class="outline-button" type="button" (click)="scheduleFamilyFromRecord(selectedPsychologistFamily)"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#psych-icon-calendar"></use></svg>Agendar cita</button></footer>
+              }
             </section>
           }
+        </section>
+      }
+
+      @if (activeSection === 'casos') {
+        <section class="screen cases-screen" aria-labelledby="child-interest-cases-title">
+          <header class="screen-heading"><span class="heading-icon" aria-hidden="true"><svg class="ph-icon" viewBox="0 0 24 24"><use href="#psych-icon-folder"></use></svg></span><div><h1 id="child-interest-cases-title">Casos de vinculación</h1><p>Casos disponibles y procesos asignados exclusivamente a ti</p></div></header>
+          @if (workflowNotice) { <p class="feedback" role="status">{{ workflowNotice }}</p> }
+          @if (workflowError) { <p class="feedback" role="alert">{{ workflowError }}</p> }
+          @if (psychologistHasActiveInterestCase) { <p class="feedback">{{ activePsychologistCaseSummary }} Podrás tomar otro cuando confirmes la entrega y cierres este caso.</p> }
+          @for (item of activeChildInterestCases; track item.id) {
+            <article class="psych-family-detail" style="margin-block: 1rem">
+              <header class="psych-family-detail-heading"><div><span class="psych-family-kicker">CASO DE VINCULACIÓN</span><h2>{{ item.child_name }}</h2><p>{{ item.family_name }} @if (item.child_age !== null) { · {{ item.child_age }} años }</p></div><span class="psych-family-status">{{ item.status.replaceAll('_', ' ') }}</span></header>
+              @if (isOtherPsychologistCase(item)) { <p>Este caso ya está asignado a otro psicólogo. No puedes consultar su expediente ni realizar acciones.</p> }
+              @else if (!item.psychologist_id) {
+                <p>Familia {{ item.family_name }} · Niño {{ item.child_name }}. La institución responsable está gestionando la primera visita.</p>
+                <button class="outline-button claim-case-button" type="button" [disabled]="psychologistHasActiveInterestCase || workflowBusyCaseId === item.id" (click)="claimInterestCase(item)">{{ psychologistHasActiveInterestCase ? 'Finaliza tu caso activo primero' : workflowBusyCaseId === item.id ? 'Tomando caso…' : 'Tomar caso' }}</button>
+              }
+              @else {
+                @if (item.status === 'informe_visita_revision' && item.report_id) {
+                  <section class="psych-institution-report-review" aria-label="Informe de visita enviado por la institución">
+                    <header class="psych-institution-report-heading"><span class="psych-institution-report-icon"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#psych-icon-document"></use></svg></span><div><span>INFORME INSTITUCIONAL</span><h3>Informe de visita enviado por la institución</h3><p>Revisa la información y decide si el proceso puede continuar.</p></div></header>
+                    <div class="psych-institution-report-content"><article><h4>Observaciones de la visita</h4><p>{{ item.report_observations || 'Sin observaciones registradas.' }}</p></article><article><h4>Fortalezas observadas</h4><p>{{ item.report_strengths || 'Sin información registrada.' }}</p></article><article><h4>Aspectos por atender</h4><p>{{ item.report_concerns || 'Sin información registrada.' }}</p></article><article><h4>Recomendación</h4><p>{{ item.report_recommendation || 'Sin recomendación registrada.' }}</p></article></div>
+                    <label class="psych-institution-review-field"><span>Observaciones de revisión <small>Obligatorio si devuelves el informe</small></span><textarea rows="3" [(ngModel)]="workflowDecisionReason" placeholder="Escribe qué debe corregirse o completarse."></textarea></label>
+                    <div class="psych-institution-report-actions"><button class="psych-report-approve" type="button" [disabled]="workflowBusyCaseId === item.id" (click)="reviewInstitutionReport(item, true)"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>{{ workflowBusyCaseId === item.id ? 'Guardando…' : 'Aprobar informe y continuar' }}</button><button class="psych-report-return" type="button" [disabled]="workflowBusyCaseId === item.id" (click)="reviewInstitutionReport(item, false)"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7v5h5M5 12a7 7 0 1 0 2-5"/></svg>Devolver para corrección</button></div>
+                  </section>
+                }
+                @if (item.status === 'visita_hogar_disponible') {
+                  @if (item.family_home_address) {
+                    <app-appointment-scheduler title="Agendar visita al hogar" description="Selecciona la fecha y hora. La dirección la registró la familia." [familyLabel]="item.family_name + ' · ' + item.child_name" [location]="item.family_home_address" [locationReadOnly]="true" locationLabel="Dirección registrada por la familia" [(date)]="workflowDraft.date" [(time)]="workflowDraft.time" [(note)]="workflowDraft.note" [busy]="workflowBusyCaseId === item.id" [feedback]="workflowError" submitLabel="Agendar visita y notificar" (scheduleRequested)="scheduleWorkflowAppointment(item, $event)"></app-appointment-scheduler>
+                  } @else {
+                    <div class="workflow-empty"><p>La familia aún no ha registrado la dirección de su hogar. Podrás agendar la visita cuando la agregue en <strong>Datos del hogar</strong>.</p><button class="text-button" type="button" (click)="loadChildInterestCases()">Actualizar dirección</button></div>
+                  }
+                }
+                @if (item.status === 'cita_hogar_programada') { <p>Visita al hogar: {{ item.appointment_date }} · {{ item.appointment_time?.slice(0,5) }}. {{ item.appointment_note }}</p>@if (!item.attended_at) { <button class="outline-button" type="button" [disabled]="workflowBusyCaseId === item.id" (click)="confirmWorkflowAppointment(item)">Confirmar visita realizada</button> } }
+                @if (item.status === 'evaluacion_hogar_pendiente') { <h3>Evaluación del hogar</h3><div class="form-grid"><label class="field full-field"><span>Observaciones *</span><textarea rows="3" [(ngModel)]="workflowDraft.observations"></textarea></label><label class="field"><span>Fortalezas</span><textarea rows="2" [(ngModel)]="workflowDraft.strengths"></textarea></label><label class="field"><span>Aspectos por atender</span><textarea rows="2" [(ngModel)]="workflowDraft.concerns"></textarea></label><label class="field full-field"><span>Recomendación *</span><textarea rows="2" [(ngModel)]="workflowDraft.recommendation"></textarea></label></div><button class="primary-button" type="button" [disabled]="workflowBusyCaseId === item.id" (click)="submitWorkflowEvaluation(item)">Enviar evaluación a la institución</button> }
+                @if (item.status === 'cita_entrega_programada') { <p>Cita de entrega: {{ item.appointment_date }} · {{ item.appointment_time?.slice(0,5) }}. El caso seguirá activo hasta que confirmes que la entrega se realizó.</p>@if (!item.attended_at) { <button class="outline-button" type="button" [disabled]="workflowBusyCaseId === item.id" (click)="confirmWorkflowAppointment(item)">Confirmar entrega realizada</button> } }
+                @if (item.status === 'entrega_confirmada') { <p>La entrega está confirmada. Al cerrar el caso se actualizará a Finalizado y quedarás disponible para otro.</p><button class="primary-button" type="button" [disabled]="workflowBusyCaseId === item.id" (click)="closeInterestCase(item)">Cerrar caso</button> }
+                @if (item.status === 'evaluacion_hogar_no_favorable') { <p>La institución registró que la evaluación no fue favorable. El caso sigue abierto; puedes revisar la observación institucional antes de continuar.</p><p>{{ item.institution_observations }}</p> }
+              }
+            </article>
+          } @empty { <div class="empty-card"><h2>No hay casos activos</h2><p>Los intereses familiares recibidos por las instituciones aparecerán aquí para que un psicólogo pueda tomar el caso.</p></div> }
+          @if (completedChildInterestCases.length) { <section class="completed-cases-section" aria-labelledby="completed-cases-title"><div class="completed-cases-heading"><span class="completed-cases-mark"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></span><div><h2 id="completed-cases-title">Casos finalizados</h2><p>Procesos cerrados después de confirmar la entrega.</p></div></div><div class="completed-cases-list">@for (item of completedChildInterestCases; track item.id) { <article class="completed-case-card"><span class="completed-case-icon"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#psych-icon-folder"></use></svg></span><div class="completed-case-copy"><span class="completed-case-kicker">CASO CERRADO</span><h3>{{ item.child_name }} · {{ item.family_name }}</h3><p>Entrega confirmada</p></div><span class="completed-case-status"><svg class="ph-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Finalizado</span></article> }</div></section> }
         </section>
       }
 
@@ -124,17 +176,21 @@
       @if (activeSection === 'citas') {
         <section class="screen appointments-screen" aria-labelledby="appointments-title">
           <header class="screen-heading"><div><h1 id="appointments-title">Citas</h1><p>Familias aprobadas y agenda</p></div></header>
-          <section class="appointment-panel"><div class="section-heading-row"><div><h2>Agendar cita</h2><p>Selecciona la familia y los detalles de la cita.</p></div></div>
-            @if (approvedFamilies.length) {
-              <form class="appointment-form" id="appointment-form" (ngSubmit)="scheduleApprovedFamilyAppointment()">
-                <label class="field full-field"><span>Familia</span><select name="approvedFamily" [(ngModel)]="familyAppointmentDraft.familyId">@for (family of approvedFamilies; track family.family_id) { <option [value]="family.family_id">{{ family.full_name }} · {{ family.documents.length }} documento(s)</option> }</select></label>
-                <label class="field"><span>Fecha</span><input type="date" name="familyDate" [(ngModel)]="familyAppointmentDraft.date" required /></label><label class="field"><span>Hora</span><input type="time" name="familyTime" [(ngModel)]="familyAppointmentDraft.time" required /></label>
-                <label class="field full-field"><span>Nota (opcional)</span><textarea name="familyNote" [(ngModel)]="familyAppointmentDraft.note" rows="2"></textarea></label>
-                @if (appointmentFeedback) { <p class="feedback full-field" role="status">{{ appointmentFeedback }}</p> }
-                <button class="primary-button full-field" type="submit">{{ editingAppointmentId ? 'Guardar cambios de la cita' : 'Agendar y avisar a la familia' }}</button>
-              </form>
-            } @else { <div class="empty-card"><h2>No hay familias aprobadas todavía</h2><p>Cuando el administrador apruebe una familia, aparecerá aquí para agendar su cita.</p></div> }
-          </section>
+          @if (assignedFamilies.length) {
+            <app-appointment-scheduler
+              title="Agendar cita"
+              description="Selecciona la familia y los detalles de la cita."
+              [familyOptions]="approvedFamilyAppointmentOptions"
+              [(familyId)]="familyAppointmentDraft.familyId"
+              [(date)]="familyAppointmentDraft.date"
+              [(time)]="familyAppointmentDraft.time"
+              [(location)]="familyAppointmentDraft.location"
+              [(note)]="familyAppointmentDraft.note"
+              [feedback]="appointmentFeedback"
+              [submitLabel]="editingAppointmentId ? 'Guardar cambios de la cita' : 'Agendar y avisar a la familia'"
+              (scheduleRequested)="scheduleApprovedFamilyAppointment($event)">
+            </app-appointment-scheduler>
+          } @else { <div class="empty-card"><h2>No tienes expedientes asignados</h2><p>Primero toma un expediente aprobado en la sección Expedientes. Solo podrás agendar citas para familias a tu cargo.</p></div> }
           <section class="calendar-panel" aria-label="Calendario de citas agendadas">
             <div class="calendar-main">
               <div class="calendar-toolbar">
@@ -173,7 +229,7 @@
               <article class="agenda-card">
                 <span class="agenda-icon" aria-hidden="true"><svg class="ph-icon" viewBox="0 0 24 24"><use href="#psych-icon-calendar"></use></svg></span>
                 <div class="agenda-copy"><h3>{{ appointment.family_name || 'Familia solicitante' }}</h3><p><strong>{{ appointment.title }}</strong><span>{{ formatAppointmentDate(appointment.appointment_date) }} · {{ appointment.appointment_time.slice(0, 5) }}</span></p>@if (appointment.note) { <small>{{ appointment.note }}</small> }</div>
-                <div class="agenda-actions">@if (!appointment.attended_at) { <button class="text-button" type="button" (click)="confirmFamilyArrival(appointment)">Sí, la familia llegó</button> } @else if (!hasReportForAppointment(appointment.id)) { <button class="text-button" type="button" (click)="reportAppointmentId = appointment.id; showSection('informes')">Elaborar informe</button> } @else { <span class="status-pill status-done">Informe enviado</span> }<button class="text-button" type="button" (click)="editFamilyAppointment(appointment)">Editar</button><button class="text-button" type="button" (click)="deleteFamilyAppointment(appointment.id)">Eliminar</button></div>
+                <div class="agenda-actions">@if (appointment.child_interest_case_id) { <button class="text-button" type="button" (click)="showSection('casos')">Gestionar caso</button> } @else { @if (!appointment.attended_at) { <button class="text-button" type="button" (click)="confirmFamilyArrival(appointment)">Sí, la familia llegó</button> } @else if (!hasReportForAppointment(appointment.id)) { <button class="text-button" type="button" (click)="reportAppointmentId = appointment.id; showSection('informes')">Elaborar informe</button> } @else { <span class="status-pill status-done">Informe enviado</span> }<button class="text-button" type="button" (click)="editFamilyAppointment(appointment)">Editar</button><button class="text-button" type="button" (click)="deleteFamilyAppointment(appointment.id)">Eliminar</button> }</div>
               </article>
             } @empty { <div class="empty-card"><p>No hay citas agendadas.</p></div> }
           </section>
@@ -217,7 +273,7 @@
             <article class="profile-card identity-card"><button class="profile-avatar-control" type="button" title="Cambiar foto de perfil" aria-label="Cambiar foto de perfil" (click)="profilePhotoInput.click()"><span class="profile-avatar">@if (profilePhotoUrl) { <img [src]="profilePhotoUrl" alt="" /> } @else { <span aria-hidden="true"><svg class="ph-icon" viewBox="0 0 24 24"><use href="#psych-icon-brain"></use></svg></span> }</span><span class="avatar-camera" aria-hidden="true"><svg class="ph-icon" viewBox="0 0 24 24"><use href="#psych-icon-camera"></use></svg></span></button><input #profilePhotoInput class="profile-photo-input" type="file" accept="image/*" aria-label="Seleccionar foto de perfil" (change)="changeProfilePhoto($event)" /><div><p class="card-kicker">Información personal · demostración</p><h2>{{ profile.name }}</h2><p>{{ profile.specialty }}</p><p>{{ profile.email }}</p><p>{{ profile.phone || 'Teléfono: no especificado' }}</p></div></article>
             <form class="profile-card profile-edit" (ngSubmit)="saveProfile()"><h2>Información personal</h2><div class="profile-fields"><label class="field"><span>Nombre</span><input name="profileName" [(ngModel)]="profile.name" /></label><label class="field"><span>Correo electrónico</span><input type="email" name="profileEmail" [(ngModel)]="profile.email" /></label><label class="field full-field"><span>Teléfono</span><input type="tel" name="profilePhone" [(ngModel)]="profile.phone" placeholder="No especificado" /></label></div><button class="text-button" type="submit">Guardar información personal</button></form>
             <form class="profile-card" (ngSubmit)="saveProfile()"><h2>Información profesional</h2><div class="profile-fields"><label class="field full-field"><span>Especialidad</span><input name="specialty" [(ngModel)]="profile.specialty" /></label><label class="field full-field"><span>Formación académica</span><input name="education" [(ngModel)]="profile.education" placeholder="No especificada" /></label><label class="field"><span>Credenciales</span><input name="credentials" [(ngModel)]="profile.credentials" placeholder="No especificadas" /></label><label class="field"><span>Institución</span><input name="institution" [(ngModel)]="profile.institution" placeholder="No especificada" /></label></div><button class="text-button" type="submit">Guardar información profesional</button></form>
-            <article class="profile-card activity-card"><h2>Familias aprobadas</h2><div class="activity-metrics"><div><strong>{{ approvedFamilies.length }}</strong><span>Disponibles para atención</span></div></div></article>
+            <article class="profile-card activity-card"><h2>Expedientes a tu cargo</h2><div class="activity-metrics"><div><strong>{{ assignedFamilies.length }}</strong><span>Disponibles para atención</span></div></div></article>
             <form class="profile-card" (ngSubmit)="saveProfile()"><h2>Preferencias y notificaciones</h2><label class="field"><span>Horario de atención</span><input name="officeHours" [(ngModel)]="profile.officeHours" placeholder="No especificado" /></label><div class="toggle-row"><span>Notificaciones</span><button class="switch" type="button" role="switch" [attr.aria-checked]="notificationsEnabled" [class.switch-off]="!notificationsEnabled" (click)="notificationsEnabled = !notificationsEnabled"><i></i></button></div><button class="text-button" type="submit">Guardar preferencias</button></form>
             <article class="profile-card simple-section"><h2>Seguridad</h2><p>Cambio de contraseña</p><p>Opciones de acceso</p><small>Sin conexión a servicios de autenticación.</small></article><article class="profile-card simple-section"><h2>Ayuda y soporte</h2><p>Ayuda y soporte</p><small>Información demostrativa.</small></article>
             @if (profileFeedback) { <p class="feedback profile-feedback" role="status">{{ profileFeedback }}</p> }
